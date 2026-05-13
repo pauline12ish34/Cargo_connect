@@ -1,3 +1,4 @@
+import '../widgets/app_states.dart';
 import 'package:cargo_app/screens/driver_details.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -78,6 +79,12 @@ class _SignupScreenState extends State<SignupScreen> {
       backgroundColor: Colors.white,
       body: Consumer<AuthProvider>(
         builder: (context, authProvider, child) {
+          if (authProvider.isLoading) {
+            return const AppLoading(message: 'Signing up...');
+          }
+          if (authProvider.error != null && authProvider.error!.isNotEmpty) {
+            return AppError(message: authProvider.error!);
+          }
           return Padding(
             padding: const EdgeInsets.all(24),
             child: Form(

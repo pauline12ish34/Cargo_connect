@@ -1,3 +1,4 @@
+import '../widgets/app_states.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
@@ -52,6 +53,12 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: Colors.white,
       body: Consumer<AuthProvider>(
         builder: (context, authProvider, child) {
+          if (authProvider.isLoading) {
+            return const AppLoading(message: 'Logging in...');
+          }
+          if (authProvider.error != null && authProvider.error!.isNotEmpty) {
+            return AppError(message: authProvider.error!);
+          }
           return Padding(
             padding: const EdgeInsets.all(24),
             child: Form(

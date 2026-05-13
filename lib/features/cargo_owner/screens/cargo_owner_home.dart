@@ -1,3 +1,4 @@
+import '../../../../widgets/app_states.dart';
 
 import 'package:cargo_app/constants.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +10,7 @@ import '../../../providers/auth_provider.dart';
 import '../../../features/profile/providers/profile_provider.dart';
 import '../../../screens/create_job_screen.dart';
 import '../../../screens/job_details_screen.dart';
+import '../../../screens/settings_screen.dart';
 
 class CargoOwnerHome extends StatefulWidget {
   const CargoOwnerHome({super.key});
@@ -84,7 +86,10 @@ class _CargoOwnerHomeState extends State<CargoOwnerHome> {
           ),
         ],
       ),
-      body: pages[_selectedIndex],
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: pages,
+      ),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
@@ -417,34 +422,45 @@ class _ProfileTab extends StatelessWidget {
               const SizedBox(height: 24),
 
               // Profile Options
-              _ProfileOption(
-                icon: Icons.person,
-                title: 'Edit Profile',
-                onTap: () {
-                  // TODO: Navigate to edit profile
-                },
-              ),
-              _ProfileOption(
-                icon: Icons.notifications,
-                title: 'Notifications',
-                onTap: () {
-                  // TODO: Navigate to notifications settings
-                },
-              ),
-              _ProfileOption(
-                icon: Icons.help,
-                title: 'Help & Support',
-                onTap: () {
-                  // TODO: Navigate to help
-                },
-              ),
-              _ProfileOption(
-                icon: Icons.info,
-                title: 'About',
-                onTap: () {
-                  // TODO: Navigate to about
-                },
-              ),
+                _ProfileOption(
+                  icon: Icons.person,
+                  title: 'Edit Profile',
+                  onTap: () {
+                    // TODO: Navigate to edit profile
+                  },
+                ),
+                _ProfileOption(
+                  icon: Icons.settings,
+                  title: 'Settings',
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => SettingsScreen(),
+                      ),
+                    );
+                  },
+                ),
+                _ProfileOption(
+                  icon: Icons.notifications,
+                  title: 'Notifications',
+                  onTap: () {
+                    // TODO: Navigate to notifications settings
+                  },
+                ),
+                _ProfileOption(
+                  icon: Icons.help,
+                  title: 'Help & Support',
+                  onTap: () {
+                    // TODO: Navigate to help
+                  },
+                ),
+                _ProfileOption(
+                  icon: Icons.info,
+                  title: 'About',
+                  onTap: () {
+                    // TODO: Navigate to about
+                  },
+                ),
               const SizedBox(height: 24),
 
               // Logout Button

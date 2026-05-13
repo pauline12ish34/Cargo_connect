@@ -1,3 +1,4 @@
+import '../../../../widgets/app_states.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/models/booking_model.dart';
@@ -106,7 +107,10 @@ class _DriverHomeState extends State<DriverHome> {
           ),
         ],
       ),
-      body: pages[_selectedIndex],
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: pages,
+      ),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         items: const <BottomNavigationBarItem>[

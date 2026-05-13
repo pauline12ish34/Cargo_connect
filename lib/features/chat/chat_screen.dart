@@ -95,7 +95,7 @@ class _ChatScreenState extends State<ChatScreen> {
     return WillPopScope( // Add this to control back button behavior
       onWillPop: () async {
         // Clean up any ongoing operations before popping
-        final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+        // final chatProvider = Provider.of<ChatProvider>(context, listen: false);
         // Add any cleanup logic here if needed
         return true; // Allow pop
       },
@@ -411,12 +411,10 @@ class _MessageBubble extends StatelessWidget {
             Flexible(
               child: Text(
                 message.content,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade600,
-                  fontStyle: FontStyle.italic,
+                style: const TextStyle(
+                  color: Colors.black87,
+                  fontWeight: FontWeight.bold,
                 ),
-                textAlign: TextAlign.center,
               ),
             ),
           ],
@@ -425,82 +423,39 @@ class _MessageBubble extends StatelessWidget {
     }
 
     return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
       margin: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+      decoration: BoxDecoration(
+        color: isMe ? primaryGreen : Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (!isMe) ...[
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: primaryGreen,
-              child: Text(
-                message.senderName.isNotEmpty
-                    ? message.senderName[0].toUpperCase()
-                    : 'U',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
+          if (!isMe)
+            Text(
+              message.senderName,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade600,
               ),
             ),
-            const SizedBox(width: 8),
-          ],
-          Flexible(
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
-              decoration: BoxDecoration(
-                color: isMe ? primaryGreen : Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (!isMe)
-                    Text(
-                      message.senderName,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  Text(
-                    message.content,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: isMe ? Colors.white : Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _formatTime(message.timestamp),
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: isMe ? Colors.white70 : Colors.grey.shade500,
-                    ),
-                  ),
-                ],
-              ),
+          Text(
+            message.content,
+            style: TextStyle(
+              fontSize: 16,
+              color: isMe ? Colors.white : Colors.black87,
             ),
           ),
-          if (isMe) ...[
-            const SizedBox(width: 8),
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: Colors.green,
-              child: Text(
-                message.senderName.isNotEmpty
-                    ? message.senderName[0].toUpperCase()
-                    : 'M',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+          const SizedBox(height: 4),
+          Text(
+            _formatTime(message.timestamp),
+            style: TextStyle(
+              fontSize: 10,
+              color: isMe ? Colors.white70 : Colors.grey.shade500,
             ),
-          ],
+          ),
         ],
       ),
     );

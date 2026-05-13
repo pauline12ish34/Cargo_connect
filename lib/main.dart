@@ -19,6 +19,8 @@ import 'features/booking/providers/booking_provider.dart';
 import 'core/repositories/user_repository.dart';
 import 'core/repositories/booking_repository.dart';
 import 'package:cargo_app/constants.dart';
+import 'providers/theme_provider.dart';
+import 'utils/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -67,9 +69,10 @@ class MyApp extends StatelessWidget {
             update: (context, chatRepo, previous) =>
             previous ?? ChatProvider(chatRepo),
           ),
+          ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ],
-        child: Consumer<AuthProvider>(
-          builder: (context, authProvider, child) {
+        child: Consumer2<AuthProvider, ThemeProvider>(
+          builder: (context, authProvider, themeProvider, child) {
             // Initialize auth state when the app starts
             WidgetsBinding.instance.addPostFrameCallback((_) {
               authProvider.initializeAuth();
@@ -78,11 +81,9 @@ class MyApp extends StatelessWidget {
             return MaterialApp(
               title: 'CargoLink',
               debugShowCheckedModeBanner: false,
-              theme: ThemeData(
-                fontFamily: 'Lexend',
-                useMaterial3: true,
-                colorScheme: ColorScheme.fromSeed(seedColor: primaryGreen),
-              ),
+              theme: AppTheme.lightTheme,
+              darkTheme: AppTheme.darkTheme,
+              themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
               initialRoute: '/splash',
               routes: {
                 '/splash': (context) => const SplashScreen(),

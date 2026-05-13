@@ -1,4 +1,6 @@
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../enums/app_enums.dart';
 
 enum BookingStatus {
   pending,
@@ -9,13 +11,7 @@ enum BookingStatus {
   cancelled
 }
 
-enum VehicleType {
-  miniTruck,
-  pickup,
-  largeTruck,
-  van,
-  motorcycle
-}
+// Use the VehicleType enum from app_enums.dart instead
 
 class BookingModel {
   final String id;
@@ -65,8 +61,8 @@ class BookingModel {
       dropoffLocation: data['dropoffLocation'] ?? '',
       cargoDescription: data['cargoDescription'] ?? '',
       vehicleType: VehicleType.values.firstWhere(
-            (e) => e.toString().split('.').last == data['vehicleType'],
-        orElse: () => VehicleType.miniTruck,
+        (e) => e.toString().split('.').last == data['vehicleType'],
+        orElse: () => VehicleType.truck,
       ),
       weight: data['weight']?.toDouble(),
       specialInstructions: data['specialInstructions'],
@@ -147,16 +143,14 @@ class BookingModel {
 
   String get vehicleTypeDisplayName {
     switch (vehicleType) {
-      case VehicleType.miniTruck:
-        return 'Mini Truck';
-      case VehicleType.pickup:
-        return 'Pickup';
-      case VehicleType.largeTruck:
-        return 'Large Truck';
+      case VehicleType.truck:
+        return 'Truck';
       case VehicleType.van:
         return 'Van';
-      case VehicleType.motorcycle:
-        return 'Motorcycle';
+      case VehicleType.pickup:
+        return 'Pickup';
+      case VehicleType.lorry:
+        return 'Lorry';
     }
   }
 

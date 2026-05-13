@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/models/booking_model.dart';
+// Only import VehicleType from enums to avoid BookingStatus conflict
+import '../../../core/enums/app_enums.dart' show VehicleType;
 import '../../../core/repositories/booking_repository.dart';
 
 class BookingProvider with ChangeNotifier {

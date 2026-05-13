@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../features/profile/providers/profile_provider.dart';
+import '../widgets/app_states.dart';
 import '../features/cargo_owner/screens/cargo_owner_home.dart';
 import '../features/driver/screens/driver_home.dart';
 
@@ -54,50 +55,15 @@ class _HomeState extends State<Home> {
       builder: (context, authProvider, profileProvider, child) {
         // Show loading while fetching user profile
         if (profileProvider.isLoading) {
-          return const Scaffold(
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Loading your profile...'),
-                ],
-              ),
-            ),
-          );
+          return const Scaffold(body: AppLoading(message: 'Loading your profile...'));
         }
 
         // Handle error state
         if (profileProvider.error != null) {
           return Scaffold(
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: Theme.of(context).colorScheme.error,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Error loading profile',
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    profileProvider.error!,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: _loadUserProfile,
-                    child: const Text('Retry'),
-                  ),
-                ],
-              ),
+            body: AppError(
+              message: profileProvider.error!,
+              onRetry: _loadUserProfile,
             ),
           );
         }
@@ -114,32 +80,10 @@ class _HomeState extends State<Home> {
         }
 
         // Fallback if user model is not loaded or role is unclear
-        return const _LoadingHome();
+        return const AppEmpty(message: 'No profile found');
       },
     );
   }
 }
 
-class _LoadingHome extends StatelessWidget {
-  const _LoadingHome();
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('CargoLink'),
-        automaticallyImplyLeading: false,
-      ),
-      body: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Loading your profile...'),
-          ],
-        ),
-      ),
-    );
-  }
-}

@@ -439,7 +439,6 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
           vehicleType: widget.booking.vehicleType,
           pickupLocation: widget.booking.pickupLocation,
           dropoffLocation: widget.booking.dropoffLocation,
-          cargoDescription: widget.booking.cargoDescription,
           isReassignment: true,
           bookingId: widget.booking.id,
         ),

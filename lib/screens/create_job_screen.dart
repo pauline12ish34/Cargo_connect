@@ -1,7 +1,9 @@
+import '../widgets/app_states.dart';
+import '../utils/page_transitions.dart';
 import 'package:cargo_app/constants.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../core/models/booking_model.dart';
+import '../core/enums/app_enums.dart';
 import '../../../features/booking/providers/booking_provider.dart';
 import '../../../providers/auth_provider.dart';
 import 'driver_selection_screen.dart';
@@ -22,7 +24,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
   final _specialInstructionsController = TextEditingController();
   final _estimatedPriceController = TextEditingController();
 
-  VehicleType _selectedVehicleType = VehicleType.miniTruck;
+  VehicleType _selectedVehicleType = VehicleType.truck;
 
   @override
   void dispose() {
@@ -66,18 +68,14 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
     );
 
     if (success && mounted) {
-      // Navigate to driver selection screen
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => DriverSelectionScreen(
-            vehicleType: _selectedVehicleType,
-            pickupLocation: _pickupController.text.trim(),
-            dropoffLocation: _dropoffController.text.trim(),
-            cargoDescription: _cargoDescriptionController.text.trim(),
-          ),
+      // Navigate to driver selection screen with fade transition
+      Navigator.of(context).push(FadePageRoute(
+        page: DriverSelectionScreen(
+          vehicleType: _selectedVehicleType,
+          pickupLocation: _pickupController.text.trim(),
+          dropoffLocation: _dropoffController.text.trim(),
         ),
-      );
+      ));
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -98,6 +96,12 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
       ),
       body: Consumer<BookingProvider>(
         builder: (context, bookingProvider, child) {
+          if (bookingProvider.isLoading) {
+            return const AppLoading(message: 'Creating job...');
+          }
+          if (bookingProvider.error != null && bookingProvider.error!.isNotEmpty) {
+            return AppError(message: bookingProvider.error!);
+          }
           return Padding(
             padding: const EdgeInsets.all(16.0),
             child: Form(
@@ -254,16 +258,14 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
 
   String _getVehicleTypeDisplayName(VehicleType type) {
     switch (type) {
-      case VehicleType.miniTruck:
-        return 'Mini Truck';
-      case VehicleType.pickup:
-        return 'Pickup';
-      case VehicleType.largeTruck:
-        return 'Large Truck';
+      case VehicleType.truck:
+        return 'Truck';
       case VehicleType.van:
         return 'Van';
-      case VehicleType.motorcycle:
-        return 'Motorcycle';
+      case VehicleType.pickup:
+        return 'Pickup';
+      case VehicleType.lorry:
+        return 'Lorry';
     }
   }
 }

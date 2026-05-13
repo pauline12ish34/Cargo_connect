@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/repositories/user_repository.dart';
 import '../providers/auth_provider.dart';
+import '../providers/theme_provider.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -174,6 +175,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Theme Section
+            Consumer<ThemeProvider>(
+              builder: (context, themeProvider, _) {
+                return _buildSettingsTile(
+                  icon: themeProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
+                  title: 'Dark Mode',
+                  subtitle: 'Toggle between light and dark theme',
+                  value: themeProvider.isDarkMode,
+                  onChanged: (value) => themeProvider.setDarkMode(value),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
             // Driver Status Section
             const Text(
               'Driver Status',
