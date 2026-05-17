@@ -18,9 +18,12 @@ import 'features/profile/providers/profile_provider.dart';
 import 'features/booking/providers/booking_provider.dart';
 import 'core/repositories/user_repository.dart';
 import 'core/repositories/booking_repository.dart';
-import 'package:cargo_app/constants.dart';
+
 import 'providers/theme_provider.dart';
 import 'utils/app_theme.dart';
+
+import 'services/push_notification_service.dart';
+import 'services/device_token_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,14 +41,14 @@ class MyApp extends StatelessWidget {
           ChangeNotifierProvider(create: (_) => AuthProvider()),
           ChangeNotifierProvider(create: (_) => ButtonProvider()),
           ProxyProvider0<UserRepository>(
-            update: (_, __) => FirebaseUserRepository(),
+            update: (_, _) => FirebaseUserRepository(),
           ),
           ProxyProvider0<BookingRepository>(
-            update: (_, __) => FirebaseBookingRepository(),
+            update: (_, _) => FirebaseBookingRepository(),
           ),
           // Add ChatRepository provider
           ProxyProvider0<ChatRepository>(
-            update: (_, __) => FirebaseChatRepository(),
+            update: (_, _) => FirebaseChatRepository(),
           ),
           ChangeNotifierProxyProvider<UserRepository, ProfileProvider>(
             create: (context) => ProfileProvider(
@@ -77,6 +80,14 @@ class MyApp extends StatelessWidget {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               authProvider.initializeAuth();
             });
+
+
+            // Initialize push notifications
+            PushNotificationService.initialize(context);
+
+            // Save device token and listen for refresh
+            DeviceTokenService.saveDeviceToken();
+            DeviceTokenService.listenForTokenRefresh();
 
             return MaterialApp(
               title: 'CargoLink',

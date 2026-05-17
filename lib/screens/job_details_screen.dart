@@ -5,9 +5,8 @@ import '../../../core/models/user_model.dart';
 import '../../../core/repositories/user_repository.dart';
 import '../../../features/booking/providers/booking_provider.dart';
 import '../../../providers/auth_provider.dart';
-import '../core/enums/app_enums.dart' hide BookingStatus;
+import '../core/enums/app_enums.dart';
 import '../features/chat/chat_screen.dart';
-import '../screens/driver_selection_screen.dart';
 import 'package:cargo_app/constants.dart';
 
 class JobDetailsScreen extends StatefulWidget {
@@ -63,7 +62,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
         backgroundColor: primaryGreen,
         foregroundColor: Colors.white,
         actions: [
-          if (widget.booking.status == BookingStatus.accepted &&
+          if (widget.booking.status == BookingStatus.confirmed &&
               widget.booking.driverId != null)
             IconButton(
               icon: const Icon(Icons.chat),
@@ -170,7 +169,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
                                   const Icon(Icons.star, size: 16, color: Colors.orange),
                                   const SizedBox(width: 4),
                                   Text(
-                                    '${_assignedDriver!.rating?.toStringAsFixed(1) ?? 'No rating'}',
+                                    _assignedDriver!.rating?.toStringAsFixed(1) ?? 'No rating',
                                     style: const TextStyle(fontSize: 14),
                                   ),
                                   const SizedBox(width: 16),
@@ -187,7 +186,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
                         ),
                       ],
                     ),
-                    if (widget.booking.status == BookingStatus.accepted) ...[
+                    if (widget.booking.status == BookingStatus.confirmed) ...[
                       const SizedBox(height: 16),
                       SizedBox(
                         width: double.infinity,
@@ -226,7 +225,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
                       subtitle: _formatDateTime(widget.booking.acceptedAt!),
                       isCompleted: true,
                     ),
-                  if (widget.booking.status == BookingStatus.declined)
+                  if (widget.booking.status == BookingStatus.cancelled)
                     _TimelineItem(
                       icon: Icons.cancel,
                       title: 'Job Declined',
@@ -271,35 +270,9 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
             ),
           ),
         ];
-      case BookingStatus.declined:
-        return [
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _reassignJob,
-              icon: const Icon(Icons.swap_horiz),
-              label: const Text('Reassign Driver'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryGreen,
-                foregroundColor: Colors.white,
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: _cancelJob,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.red,
-                side: const BorderSide(color: Colors.red),
-              ),
-              child: const Text('Cancel Job'),
-            ),
-          ),
-        ];
-      case BookingStatus.accepted:
-      case BookingStatus.inProgress:
+      // No 'declined' status in BookingStatus enum; handle as 'cancelled' or remove
+        case BookingStatus.confirmed:
+        case BookingStatus.inProgress:
         return [
           SizedBox(
             width: double.infinity,
@@ -369,7 +342,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
 
   List<Widget> _buildDriverActions() {
     switch (widget.booking.status) {
-      case BookingStatus.accepted:
+      case BookingStatus.confirmed:
         return [
           SizedBox(
             width: double.infinity,
@@ -431,31 +404,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
     );
   }
 
-  void _reassignJob() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => DriverSelectionScreen(
-          vehicleType: widget.booking.vehicleType,
-          pickupLocation: widget.booking.pickupLocation,
-          dropoffLocation: widget.booking.dropoffLocation,
-          isReassignment: true,
-          bookingId: widget.booking.id,
-        ),
-      ),
-    ).then((result) async {
-      // After reassigning, refresh the driver info and show a snackbar if reassigned
-      await _loadDriverInfo();
-      if (result == true && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Job reassigned to a new driver.'),
-            backgroundColor: primaryGreen,
-          ),
-        );
-      }
-    });
-  }
+  // _reassignJob removed as it is not used and there is no 'declined' status.
 
   void _cancelJob() async {
     final confirmed = await showDialog<bool>(
@@ -549,12 +498,7 @@ class _StatusBanner extends StatelessWidget {
       case BookingStatus.pending:
         statusColor = Colors.orange;
         statusIcon = Icons.pending;
-        statusMessage = 'Waiting for driver acceptance';
-        break;
-      case BookingStatus.accepted:
-        statusColor = primaryGreen;
-        statusIcon = Icons.check_circle;
-        statusMessage = 'Driver has accepted your job';
+          statusMessage = 'Waiting for driver confirmation';
         break;
       case BookingStatus.inProgress:
         statusColor = Colors.purple;
@@ -566,16 +510,16 @@ class _StatusBanner extends StatelessWidget {
         statusIcon = Icons.check_circle_outline;
         statusMessage = 'Job completed successfully';
         break;
-      case BookingStatus.declined:
-        statusColor = Colors.red;
-        statusIcon = Icons.cancel;
-        statusMessage = 'Driver declined this job';
-        break;
       case BookingStatus.cancelled:
         statusColor = Colors.red;
         statusIcon = Icons.cancel;
         statusMessage = 'Job was cancelled';
         break;
+        case BookingStatus.confirmed:
+          statusColor = primaryGreen;
+          statusIcon = Icons.check_circle;
+          statusMessage = 'Driver has confirmed your job';
+          break;
     }
 
     return Container(

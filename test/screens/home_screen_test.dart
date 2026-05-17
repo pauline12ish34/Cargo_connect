@@ -5,7 +5,7 @@ import 'package:cargo_app/screens/home.dart';
 
 // Fake AuthProvider for testing
 class FakeAuthProvider extends ChangeNotifier {
-  get user => null;
+  Null get user => null;
   Future<void> refreshUserData() async {}
 }
 

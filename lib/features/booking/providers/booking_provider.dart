@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import '../../../core/models/booking_model.dart';
 // Only import VehicleType from enums to avoid BookingStatus conflict
 import '../../../core/enums/app_enums.dart' show VehicleType;
+
 import '../../../core/repositories/booking_repository.dart';
+import '../../../services/job_notification_service.dart';
 
 class BookingProvider with ChangeNotifier {
   final BookingRepository _bookingRepository;
@@ -131,6 +133,19 @@ class BookingProvider with ChangeNotifier {
         );
         _availableBookings.removeAt(index);
         _myBookings.insert(0, updated);
+
+        // Send job status notification to cargo owner
+        await JobNotificationService.notifyJobStatus(
+          recipientId: updated.cargoOwnerId,
+          status: 'accepted',
+          bookingId: bookingId,
+        );
+        // Send job assignment notification to driver
+        await JobNotificationService.notifyJobStatus(
+          recipientId: updated.driverId!,
+          status: 'assigned',
+          bookingId: bookingId,
+        );
       }
 
       return true;
@@ -194,9 +209,23 @@ class BookingProvider with ChangeNotifier {
 
       final index = _myBookings.indexWhere((b) => b.id == bookingId);
       if (index != -1) {
-        _myBookings[index] = _myBookings[index].copyWith(
+        final updated = _myBookings[index].copyWith(
           status: BookingStatus.completed,
           completedAt: DateTime.now(),
+        );
+        _myBookings[index] = updated;
+
+        // Send job status notification to cargo owner
+        await JobNotificationService.notifyJobStatus(
+          recipientId: updated.cargoOwnerId,
+          status: 'completed',
+          bookingId: bookingId,
+        );
+        // Notify driver of job completion (optional)
+        await JobNotificationService.notifyJobStatus(
+          recipientId: updated.driverId!,
+          status: 'completed',
+          bookingId: bookingId,
         );
       }
 
@@ -218,8 +247,22 @@ class BookingProvider with ChangeNotifier {
 
       final index = _myBookings.indexWhere((b) => b.id == bookingId);
       if (index != -1) {
-        _myBookings[index] = _myBookings[index].copyWith(
+        final updated = _myBookings[index].copyWith(
           status: BookingStatus.cancelled,
+        );
+        _myBookings[index] = updated;
+
+        // Send job status notification to cargo owner
+        await JobNotificationService.notifyJobStatus(
+          recipientId: updated.cargoOwnerId,
+          status: 'cancelled',
+          bookingId: bookingId,
+        );
+        // Notify driver of job cancellation
+        await JobNotificationService.notifyJobStatus(
+          recipientId: updated.driverId!,
+          status: 'cancelled',
+          bookingId: bookingId,
         );
       }
 

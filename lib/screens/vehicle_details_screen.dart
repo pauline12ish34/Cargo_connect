@@ -302,172 +302,174 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> with ImageP
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Vehicle Information
-              const Text(
-                'Vehicle Information',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              
-              TextFormField(
-                controller: _vehicleTypeController,
-                decoration: const InputDecoration(
-                  labelText: 'Vehicle Type *',
-                  hintText: 'e.g., Pickup Truck, Mini Truck, Large Truck',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter your vehicle type';
-                  }
-                  return null;
-                },
-              ),
-              
-              const SizedBox(height: 16),
-              
-              TextFormField(
-                controller: _vehicleCapacityController,
-                decoration: const InputDecoration(
-                  labelText: 'Vehicle Capacity *',
-                  hintText: 'e.g., 1 ton, 5 tons, 500 kg',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter your vehicle capacity';
-                  }
-                  return null;
-                },
-              ),
-              
-              const SizedBox(height: 16),
-              
-              TextFormField(
-                controller: _plateNumberController,
-                decoration: const InputDecoration(
-                  labelText: 'Plate Number *',
-                  hintText: 'e.g., RAB 123 A',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter your vehicle plate number';
-                  }
-                  return null;
-                },
-              ),
-              
-              const SizedBox(height: 32),
-              
-              // Vehicle Documents
-              const Text(
-                'Vehicle Documents',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Upload your vehicle-related documents for verification',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: 16),
-              
-              _buildDocumentUploadCard(
-                title: 'Vehicle Photo',
-                description: 'Upload a clear photo of your vehicle',
-                onTap: () {
-                  showDocumentPickerDialog(
-                    context,
-                    'Vehicle Photo',
-                    onDocumentSelected: (file) {
-                      setState(() {
-                        _vehicleImageFile = file;
-                      });
-                    },
-                  );
-                },
-                isUploading: _vehicleImageUploading,
-                currentUrl: _user?.vehicleImageUrl,
-                selectedFile: _vehicleImageFile,
-              ),
-              
-              _buildDocumentUploadCard(
-                title: 'Vehicle Registration',
-                description: 'Upload your vehicle registration certificate',
-                onTap: () {
-                  showDocumentPickerDialog(
-                    context,
-                    'Vehicle Registration',
-                    onDocumentSelected: (file) {
-                      setState(() {
-                        _vehicleRegistrationFile = file;
-                      });
-                    },
-                  );
-                },
-                isUploading: _vehicleRegistrationUploading,
-                currentUrl: _user?.vehicleRegistration,
-                selectedFile: _vehicleRegistrationFile,
-              ),
-              
-              _buildDocumentUploadCard(
-                title: 'Insurance Document',
-                description: 'Upload your vehicle insurance certificate',
-                onTap: () {
-                  showDocumentPickerDialog(
-                    context,
-                    'Insurance Document',
-                    onDocumentSelected: (file) {
-                      setState(() {
-                        _insuranceDocumentFile = file;
-                      });
-                    },
-                  );
-                },
-                isUploading: _insuranceDocumentUploading,
-                currentUrl: _user?.insurance,
-                selectedFile: _insuranceDocumentFile,
-              ),
-              
-              const SizedBox(height: 32),
-              
-              // Save Button
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _saveVehicleDetails,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).primaryColor,
-                    foregroundColor: Colors.white,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Vehicle Information
+                const Text(
+                  'Vehicle Information',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
-                  child: _isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text(
-                          'Save Vehicle Details',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
                 ),
-              ),
-              
-              const SizedBox(height: 16),
-            ],
+                const SizedBox(height: 16),
+                
+                TextFormField(
+                  controller: _vehicleTypeController,
+                  decoration: const InputDecoration(
+                    labelText: 'Vehicle Type *',
+                    hintText: 'e.g., Pickup Truck, Mini Truck, Large Truck',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter your vehicle type';
+                    }
+                    return null;
+                  },
+                ),
+                
+                const SizedBox(height: 16),
+                
+                TextFormField(
+                  controller: _vehicleCapacityController,
+                  decoration: const InputDecoration(
+                    labelText: 'Vehicle Capacity *',
+                    hintText: 'e.g., 1 ton, 5 tons, 500 kg',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter your vehicle capacity';
+                    }
+                    return null;
+                  },
+                ),
+                
+                const SizedBox(height: 16),
+                
+                TextFormField(
+                  controller: _plateNumberController,
+                  decoration: const InputDecoration(
+                    labelText: 'Plate Number *',
+                    hintText: 'e.g., RAB 123 A',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter your vehicle plate number';
+                    }
+                    return null;
+                  },
+                ),
+                
+                const SizedBox(height: 32),
+                
+                // Vehicle Documents
+                const Text(
+                  'Vehicle Documents',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Upload your vehicle-related documents for verification',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                _buildDocumentUploadCard(
+                  title: 'Vehicle Photo',
+                  description: 'Upload a clear photo of your vehicle',
+                  onTap: () {
+                    showDocumentPickerDialog(
+                      context,
+                      'Vehicle Photo',
+                      onDocumentSelected: (file) {
+                        setState(() {
+                          _vehicleImageFile = file;
+                        });
+                      },
+                    );
+                  },
+                  isUploading: _vehicleImageUploading,
+                  currentUrl: _user?.vehicleImageUrl,
+                  selectedFile: _vehicleImageFile,
+                ),
+                
+                _buildDocumentUploadCard(
+                  title: 'Vehicle Registration',
+                  description: 'Upload your vehicle registration certificate',
+                  onTap: () {
+                    showDocumentPickerDialog(
+                      context,
+                      'Vehicle Registration',
+                      onDocumentSelected: (file) {
+                        setState(() {
+                          _vehicleRegistrationFile = file;
+                        });
+                      },
+                    );
+                  },
+                  isUploading: _vehicleRegistrationUploading,
+                  currentUrl: _user?.vehicleRegistration,
+                  selectedFile: _vehicleRegistrationFile,
+                ),
+                
+                _buildDocumentUploadCard(
+                  title: 'Insurance Document',
+                  description: 'Upload your vehicle insurance certificate',
+                  onTap: () {
+                    showDocumentPickerDialog(
+                      context,
+                      'Insurance Document',
+                      onDocumentSelected: (file) {
+                        setState(() {
+                          _insuranceDocumentFile = file;
+                        });
+                      },
+                    );
+                  },
+                  isUploading: _insuranceDocumentUploading,
+                  currentUrl: _user?.insurance,
+                  selectedFile: _insuranceDocumentFile,
+                ),
+                
+                const SizedBox(height: 32),
+                
+                // Save Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _saveVehicleDetails,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).primaryColor,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: _isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text(
+                            'Save Vehicle Details',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                  ),
+                ),
+                
+                const SizedBox(height: 16),
+              ],
+            ),
           ),
         ),
       ),

@@ -7,100 +7,8 @@ import 'chat_provider.dart';
 import 'package:cargo_app/constants.dart';
 
 class ChatScreen extends StatefulWidget {
-  final BookingModel booking;
-  final String otherUserName;
-
-  const ChatScreen({
-    super.key,
-    required this.booking,
-    required this.otherUserName,
-  });
-
-  @override
-  State<ChatScreen> createState() => _ChatScreenState();
-}
-
-class _ChatScreenState extends State<ChatScreen> {
-  final TextEditingController _messageController = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
-  bool _isInitialized = false;
-  bool _shouldScrollToBottom = false;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeChat();
-    });
-  }
-
-  void _initializeChat() {
-    if (_isInitialized) return; // Prevent multiple initializations
-
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
-
-    if (authProvider.user != null) {
-      chatProvider.loadMessages(widget.booking.id);
-      chatProvider.markMessagesAsRead(widget.booking.id, authProvider.user!.uid);
-      _isInitialized = true;
-    }
-  }
-
-  @override
-  void dispose() {
-    _messageController.dispose();
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  void _sendMessage() async {
-    if (_messageController.text.trim().isEmpty) return;
-
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
-
-    if (authProvider.user != null) {
-      final success = await chatProvider.sendMessage(
-        bookingId: widget.booking.id,
-        senderId: authProvider.user!.uid,
-        senderName: authProvider.user!.name,
-        content: _messageController.text.trim(),
-      );
-
-      if (success) {
-        _messageController.clear();
-        _shouldScrollToBottom = true; // Set flag instead of immediate scroll
-      }
-    }
-  }
-
-  void _scrollToBottom() {
-    if (!_shouldScrollToBottom) return; // Only scroll when needed
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients && mounted) { // Check if widget is still mounted
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-        _shouldScrollToBottom = false; // Reset flag
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return WillPopScope( // Add this to control back button behavior
-      onWillPop: () async {
-        // Clean up any ongoing operations before popping
-        // final chatProvider = Provider.of<ChatProvider>(context, listen: false);
-        // Add any cleanup logic here if needed
-        return true; // Allow pop
-      },
-      child: Scaffold(
-        appBar: AppBar(
+      child: void Scaffold(
+        appBar = AppBar(
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -122,22 +30,133 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ],
         ),
-        body: Column(
-          children: [
-            // Job Status Banner
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              color: _getStatusColor().withOpacity(0.1),
-              child: Row(
-                children: [
-                  Icon(
-                    _getStatusIcon(),
+        body = SafeArea(
+          child: Column(
+            children: [
+              // Job Status Banner
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                color: _getStatusColor().withOpacity(0.1),
+                child: Row(
+                  children: [
+                    Icon(
+                      _getStatusIcon(),
+                      size: 16,
+                      color: _getStatusColor(),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Job Status: ${widget.booking.statusDisplayName}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: _getStatusColor(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Messages List
+              Expanded(
+                child: Consumer<ChatProvider>(
+                  builder: (context, chatProvider, child) {
+                    return StreamBuilder<List<ChatMessage>>(
+                      stream: chatProvider.streamMessages(widget.booking.id),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting && !_isInitialized) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+
+                        if (snapshot.hasError) {
+                          return Center(
+                            child: Text('Error: ${snapshot.error}'),
+                          );
+                        }
+
+                        final messages = snapshot.data ?? [];
+                        if (messages.isEmpty) {
+                          return const Center(
+                            child: Text('No messages yet. Start the conversation!'),
+                          );
+                        }
+
+                        return ListView.builder(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                          itemCount: messages.length,
+                          itemBuilder: (context, index) {
+                            final message = messages[index];
+                            final isMe = message.senderId == authProvider.user?.uid;
+                            return Align(
+                              alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                              child: Container(
+                                margin: const EdgeInsets.symmetric(vertical: 4),
+                                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                                decoration: BoxDecoration(
+                                  color: isMe ? primaryGreen.withOpacity(0.15) : Colors.grey[200],
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      message.content,
+                                      style: const TextStyle(fontSize: 15),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      _formatTimestamp(message.timestamp),
+                                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+
+              // Message Input
+              Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _messageController,
+                        decoration: const InputDecoration(
+                          hintText: 'Type a message...',
+                          border: OutlineInputBorder(),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        ),
+                        onSubmitted: (_) => _sendMessage(),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Icons.send, color: primaryGreen),
+                      onPressed: _sendMessage,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
                     size: 16,
-                    color: _getStatusColor(),
+                    color
+
+  ChatScreen({super.key});: void _getStatusColor(),
                   ),
-                  const SizedBox(width: 8),
-                  Text(
+                  const void SizedBox(width = 8),
+                  void Text(
                     'Job Status: ${widget.booking.statusDisplayName}',
                     style: TextStyle(
                       fontSize: 14,
@@ -150,8 +169,8 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
 
             // Messages List
-            Expanded(
-              child: Consumer<ChatProvider>(
+            void Expanded(
+              child = Consumer<ChatProvider>(
                 builder: (context, chatProvider, child) {
                   return StreamBuilder<List<ChatMessage>>(
                     stream: chatProvider.streamMessages(widget.booking.id),
@@ -225,9 +244,9 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
 
             // Message Input
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
+            void Container(
+              padding = const EdgeInsets.all(16),
+              decoration = BoxDecoration(
                 color: Colors.white,
                 boxShadow: [
                   BoxShadow(
@@ -237,7 +256,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ],
               ),
-              child: Row(
+              child = Row(
                 children: [
                   Expanded(
                     child: TextField(
@@ -379,110 +398,91 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 }
 
-class _MessageBubble extends StatelessWidget {
-  final ChatMessage message;
-  final bool isMe;
+class ChatScreen extends StatefulWidget {
+  final BookingModel booking;
+  final String otherUserName;
+  const ChatScreen({super.key, required this.booking, required this.otherUserName});
 
-  const _MessageBubble({
-    required this.message,
-    required this.isMe,
-  });
+  @override
+  State<ChatScreen> createState() => _ChatScreenState();
+}
+
+class ChatScreen extends StatefulWidget {
+  final BookingModel booking;
+  final String otherUserName;
+  const ChatScreen({super.key, required this.booking, required this.otherUserName});
+
+  @override
+  State<ChatScreen> createState() => _ChatScreenState();
+}
+
+class _ChatScreenState extends State<ChatScreen> {
+  // ...existing state fields and methods...
 
   @override
   Widget build(BuildContext context) {
-    if (message.type == MessageType.system) {
-      return Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-        decoration: BoxDecoration(
-          color: Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
+    // Place the widget tree here, using widget.booking and widget.otherUserName as needed.
+    // ...existing build method code...
+    return Scaffold(
+      appBar: AppBar(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              Icons.info_outline,
-              size: 16,
-              color: Colors.grey.shade600,
-            ),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                message.content,
-                style: const TextStyle(
-                  color: Colors.black87,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+            Text(widget.otherUserName),
+            Text(
+              widget.booking.cargoDescription,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
             ),
           ],
         ),
-      );
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      decoration: BoxDecoration(
-        color: isMe ? primaryGreen : Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (!isMe)
-            Text(
-              message.senderName,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade600,
-              ),
-            ),
-          Text(
-            message.content,
-            style: TextStyle(
-              fontSize: 16,
-              color: isMe ? Colors.white : Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            _formatTime(message.timestamp),
-            style: TextStyle(
-              fontSize: 10,
-              color: isMe ? Colors.white70 : Colors.grey.shade500,
-            ),
+        backgroundColor: primaryGreen,
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.info_outline),
+            onPressed: () {
+              _showJobDetails();
+            },
           ),
         ],
       ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Job Status Banner
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              color: _getStatusColor().withOpacity(0.1),
+              child: Row(
+                children: [
+                  Icon(
+                    _getStatusIcon(),
+                    size: 16,
+                    color: _getStatusColor(),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Job Status: ${widget.booking.statusDisplayName}',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: _getStatusColor(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // ...rest of the build method code...
+          ],
+        ),
+      ),
     );
   }
-
-  String _formatTime(DateTime dateTime) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final messageDate = DateTime(dateTime.year, dateTime.month, dateTime.day);
-
-    if (messageDate == today) {
-      return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
-    } else {
-      return '${dateTime.day}/${dateTime.month} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
-    }
-  }
-}
-
-class _DetailRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-
-  const _DetailRow({
-    required this.icon,
-    required this.label,
-    required this.value,
+  // ...rest of the _ChatScreenState code...
+    this.icon,
+    this.label,
+    this.value,
   });
 
   @override

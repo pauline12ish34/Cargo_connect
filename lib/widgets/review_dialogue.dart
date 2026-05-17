@@ -5,6 +5,8 @@ import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:cargo_app/widgets/thankyou_dialog.dart';
 
 class ReviewDialog extends StatefulWidget {
+  const ReviewDialog({super.key});
+
   // final String carId;
   // final String carName;
 

@@ -2,16 +2,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../enums/app_enums.dart';
 
-enum BookingStatus {
-  pending,
-  accepted,
-  declined,
-  inProgress,
-  completed,
-  cancelled
-}
-
-// Use the VehicleType enum from app_enums.dart instead
+// Use the BookingStatus and VehicleType enums from app_enums.dart instead
 
 class BookingModel {
   final String id;
@@ -158,10 +149,8 @@ class BookingModel {
     switch (status) {
       case BookingStatus.pending:
         return 'Pending';
-      case BookingStatus.accepted:
-        return 'Accepted';
-      case BookingStatus.declined:
-        return 'Declined';
+      case BookingStatus.confirmed:
+        return 'Confirmed';
       case BookingStatus.inProgress:
         return 'In Progress';
       case BookingStatus.completed:

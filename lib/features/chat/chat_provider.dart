@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+
 import '../../core/models/chat_model.dart';
 import '../../core/repositories/chat_repository.dart';
+import '../../services/cloud_function_service.dart';
 
 class ChatProvider with ChangeNotifier {
   final ChatRepository _chatRepository;
@@ -39,6 +41,7 @@ class ChatProvider with ChangeNotifier {
     required String senderId,
     required String senderName,
     required String content,
+    required String recipientId, // Add recipientId
     MessageType type = MessageType.text,
   }) async {
     try {
@@ -59,6 +62,15 @@ class ChatProvider with ChangeNotifier {
       // Add to local list immediately
       _messages.add(message.copyWith(id: messageId));
       notifyListeners();
+
+      // Send push notification to recipient
+      await CloudFunctionService.sendNotificationToUser(
+        recipientId,
+        {
+          'type': 'chat',
+          'message': 'New message from $senderName',
+        },
+      );
 
       return true;
     } catch (e) {

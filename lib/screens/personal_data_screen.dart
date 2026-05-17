@@ -211,7 +211,7 @@ class _PersonalDataScreenState extends State<PersonalDataScreen> {
           const SizedBox(width: 16),
           Expanded(
             child: DropdownButtonFormField<String>(
-              value: _selectedAddress,
+              initialValue: _selectedAddress,
               decoration: const InputDecoration(
                 labelText: 'Address',
                 border: InputBorder.none,

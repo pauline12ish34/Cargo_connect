@@ -404,7 +404,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                     const Text('Category:'),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
-                      value: selectedCategory,
+                      initialValue: selectedCategory,
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
                       ),

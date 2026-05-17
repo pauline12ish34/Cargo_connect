@@ -94,7 +94,7 @@ class _DriverHomeState extends State<DriverHome> {
                 onChanged: (value) async {
                   await authProvider.updateDriverAvailability(value);
                 },
-                activeColor: Colors.white,
+                activeThumbColor: Colors.white,
                 activeTrackColor: primaryGreen,
               );
             },
@@ -237,7 +237,7 @@ class _DashboardTab extends StatelessWidget {
                   Expanded(
                     child: _StatCard(
                       title: 'Rating',
-                      value: '${user?.rating?.toStringAsFixed(1) ?? '0.0'}',
+                      value: user?.rating?.toStringAsFixed(1) ?? '0.0',
                       icon: Icons.star,
                       color: Colors.orange,
                     ),
@@ -644,7 +644,7 @@ class _ProfileTab extends StatelessWidget {
                           child: Column(
                             children: [
                               Text(
-                                '${user?.rating?.toStringAsFixed(1) ?? '0.0'}',
+                                user?.rating?.toStringAsFixed(1) ?? '0.0',
                                 style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,

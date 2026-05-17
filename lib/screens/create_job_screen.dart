@@ -50,6 +50,12 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
       return;
     }
 
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
     final success = await bookingProvider.createBooking(
       cargoOwnerId: authProvider.user!.uid,
       pickupLocation: _pickupController.text.trim(),
@@ -67,8 +73,12 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
           : null,
     );
 
+    Navigator.of(context).pop(); // Remove loading dialog
+
     if (success && mounted) {
-      // Navigate to driver selection screen with fade transition
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Job created! Select a driver.')),
+      );
       Navigator.of(context).push(FadePageRoute(
         page: DriverSelectionScreen(
           vehicleType: _selectedVehicleType,
@@ -106,148 +116,161 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
             padding: const EdgeInsets.all(16.0),
             child: Form(
               key: _formKey,
-              child: ListView(
-                children: [
-                  const Text(
-                    'Job Details',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Pickup Location
-                  TextFormField(
-                    controller: _pickupController,
-                    decoration: const InputDecoration(
-                      labelText: 'Pickup Location *',
-                      prefixIcon: Icon(Icons.location_on),
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter pickup location';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Dropoff Location
-                  TextFormField(
-                    controller: _dropoffController,
-                    decoration: const InputDecoration(
-                      labelText: 'Dropoff Location *',
-                      prefixIcon: Icon(Icons.flag),
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter dropoff location';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Cargo Description
-                  TextFormField(
-                    controller: _cargoDescriptionController,
-                    decoration: const InputDecoration(
-                      labelText: 'Cargo Description *',
-                      prefixIcon: Icon(Icons.inventory),
-                      border: OutlineInputBorder(),
-                    ),
-                    maxLines: 2,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please describe your cargo';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Vehicle Type
-                  DropdownButtonFormField<VehicleType>(
-                    value: _selectedVehicleType,
-                    decoration: const InputDecoration(
-                      labelText: 'Vehicle Type *',
-                      prefixIcon: Icon(Icons.local_shipping),
-                      border: OutlineInputBorder(),
-                    ),
-                    items: VehicleType.values.map((type) {
-                      return DropdownMenuItem(
-                        value: type,
-                        child: Text(_getVehicleTypeDisplayName(type)),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedVehicleType = value!;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Weight (Optional)
-                  TextFormField(
-                    controller: _weightController,
-                    decoration: const InputDecoration(
-                      labelText: 'Weight (kg)',
-                      prefixIcon: Icon(Icons.scale),
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Estimated Price (Optional)
-                  TextFormField(
-                    controller: _estimatedPriceController,
-                    decoration: const InputDecoration(
-                      labelText: 'Estimated Price (RWF)',
-                      prefixIcon: Icon(Icons.money),
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Special Instructions (Optional)
-                  TextFormField(
-                    controller: _specialInstructionsController,
-                    decoration: const InputDecoration(
-                      labelText: 'Special Instructions',
-                      prefixIcon: Icon(Icons.note),
-                      border: OutlineInputBorder(),
-                    ),
-                    maxLines: 3,
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Create Job Button
-                  SizedBox(
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: bookingProvider.isLoading ? null : _createJob,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryGreen,
-                        foregroundColor: Colors.white,
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Job Details',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
                       ),
-                      child: bookingProvider.isLoading
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text(
-                        'CREATE JOB',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Pickup Location
+                    TextFormField(
+                      controller: _pickupController,
+                      decoration: const InputDecoration(
+                        labelText: 'Pickup Location *',
+                        prefixIcon: Icon(Icons.location_on),
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter pickup location';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Dropoff Location
+                    TextFormField(
+                      controller: _dropoffController,
+                      decoration: const InputDecoration(
+                        labelText: 'Dropoff Location *',
+                        prefixIcon: Icon(Icons.flag),
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter dropoff location';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Cargo Description
+                    TextFormField(
+                      controller: _cargoDescriptionController,
+                      decoration: const InputDecoration(
+                        labelText: 'Cargo Description *',
+                        prefixIcon: Icon(Icons.inventory),
+                        border: OutlineInputBorder(),
+                      ),
+                      maxLines: 2,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please describe your cargo';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Vehicle Type
+                    DropdownButtonFormField<VehicleType>(
+                      initialValue: _selectedVehicleType,
+                      decoration: const InputDecoration(
+                        labelText: 'Vehicle Type *',
+                        prefixIcon: Icon(Icons.local_shipping),
+                        border: OutlineInputBorder(),
+                      ),
+                      items: VehicleType.values.isNotEmpty
+                          ? VehicleType.values.map((type) {
+                              return DropdownMenuItem(
+                                value: type,
+                                child: Text(_getVehicleTypeDisplayName(type)),
+                              );
+                            }).toList()
+                          : [
+                              const DropdownMenuItem(
+                                value: null,
+                                child: Text('No vehicle types available'),
+                              ),
+                            ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() {
+                            _selectedVehicleType = value;
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Weight (Optional)
+                    TextFormField(
+                      controller: _weightController,
+                      decoration: const InputDecoration(
+                        labelText: 'Weight (kg)',
+                        prefixIcon: Icon(Icons.scale),
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Estimated Price (Optional)
+                    TextFormField(
+                      controller: _estimatedPriceController,
+                      decoration: const InputDecoration(
+                        labelText: 'Estimated Price (RWF)',
+                        prefixIcon: Icon(Icons.money),
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Special Instructions (Optional)
+                    TextFormField(
+                      controller: _specialInstructionsController,
+                      decoration: const InputDecoration(
+                        labelText: 'Special Instructions',
+                        prefixIcon: Icon(Icons.note),
+                        border: OutlineInputBorder(),
+                      ),
+                      maxLines: 3,
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Create Job Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: bookingProvider.isLoading ? null : _createJob,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryGreen,
+                          foregroundColor: Colors.white,
                         ),
+                        child: bookingProvider.isLoading
+                            ? const CircularProgressIndicator(color: Colors.white)
+                            : const Text(
+                                'CREATE JOB',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           );
