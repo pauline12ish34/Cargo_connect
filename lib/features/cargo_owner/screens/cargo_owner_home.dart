@@ -1,6 +1,7 @@
 import '../../../../widgets/app_states.dart';
 
 import 'package:cargo_app/constants.dart';
+import 'package:cargo_app/core/enums/app_enums.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/models/booking_model.dart';
@@ -352,7 +353,7 @@ class _ProfileTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer2<AuthProvider, ProfileProvider>(
       builder: (context, authProvider, profileProvider, child) {
-        final user = profileProvider.currentUser ?? authProvider.user as UserModel;
+        final user = profileProvider.currentUser ?? authProvider.user;
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -371,8 +372,8 @@ class _ProfileTab extends StatelessWidget {
                       radius: 40,
                       backgroundColor: primaryGreen,
                       child: Text(
-                        user.name.isNotEmpty == true
-                            ? user.name[0].toUpperCase()
+                        user?.name.isNotEmpty == true
+                            ? user!.name[0].toUpperCase()
                             : 'U',
                         style: const TextStyle(
                           fontSize: 32,
@@ -383,7 +384,7 @@ class _ProfileTab extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      user.name ?? 'User',
+                      user?.name ?? 'User',
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -391,7 +392,7 @@ class _ProfileTab extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      user.email ?? '',
+                      user?.email ?? '',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey.shade600,

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../core/models/booking_model.dart';
-import '../../../core/models/user_model.dart';
-import '../../../core/repositories/user_repository.dart';
-import '../../../features/booking/providers/booking_provider.dart';
-import '../../../providers/auth_provider.dart';
-import '../core/enums/app_enums.dart';
-import '../features/chat/chat_screen.dart';
+import 'package:cargo_app/core/models/booking_model.dart';
+import 'package:cargo_app/core/models/user_model.dart';
+import 'package:cargo_app/core/repositories/user_repository.dart';
+import 'package:cargo_app/features/booking/providers/booking_provider.dart';
+import 'package:cargo_app/providers/auth_provider.dart';
+import 'package:cargo_app/core/enums/app_enums.dart';
+import 'package:cargo_app/features/chat/chat_screen.dart';
 import 'package:cargo_app/constants.dart';
 
 class JobDetailsScreen extends StatefulWidget {
@@ -35,8 +35,10 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
     if (widget.booking.driverId != null) {
       setState(() => _isLoading = true);
       try {
-        final userRepository = Provider.of<UserRepository>(context, listen: false);
-        final driver = await userRepository.getUserById(widget.booking.driverId!);
+        final userRepository =
+            Provider.of<UserRepository>(context, listen: false);
+        final driver =
+            await userRepository.getUserById(widget.booking.driverId!);
         setState(() => _assignedDriver = driver);
       } catch (e) {
         if (mounted) {
@@ -53,8 +55,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
-    // final isCargoOwner = authProvider.user?.role == UserRole.cargoOwner;
-    final isCargoOwner = authProvider.user?.role.name == 'cargoOwner';
+    final isCargoOwner = authProvider.user?.role == UserRole.cargoOwner;
 
     return Scaffold(
       appBar: AppBar(
@@ -62,7 +63,8 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
         backgroundColor: primaryGreen,
         foregroundColor: Colors.white,
         actions: [
-          if (widget.booking.status == BookingStatus.confirmed &&
+          if ((widget.booking.status == BookingStatus.accepted ||
+                  widget.booking.status == BookingStatus.inProgress) &&
               widget.booking.driverId != null)
             IconButton(
               icon: const Icon(Icons.chat),
@@ -73,184 +75,201 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Status Banner
-            _StatusBanner(booking: widget.booking),
-            const SizedBox(height: 24),
-
-            // Job Information
-            _SectionCard(
-              title: 'Job Information',
+              padding: const EdgeInsets.all(16),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _InfoRow(
-                    icon: Icons.inventory,
-                    label: 'Cargo Description',
-                    value: widget.booking.cargoDescription,
-                  ),
-                  _InfoRow(
-                    icon: Icons.location_on,
-                    label: 'Pickup Location',
-                    value: widget.booking.pickupLocation,
-                  ),
-                  _InfoRow(
-                    icon: Icons.flag,
-                    label: 'Dropoff Location',
-                    value: widget.booking.dropoffLocation,
-                  ),
-                  _InfoRow(
-                    icon: Icons.local_shipping,
-                    label: 'Vehicle Type',
-                    value: widget.booking.vehicleTypeDisplayName,
-                  ),
-                  if (widget.booking.weight != null)
-                    _InfoRow(
-                      icon: Icons.scale,
-                      label: 'Weight',
-                      value: '${widget.booking.weight}kg',
-                    ),
-                  if (widget.booking.estimatedPrice != null)
-                    _InfoRow(
-                      icon: Icons.money,
-                      label: 'Estimated Price',
-                      value: '${widget.booking.estimatedPrice!.toStringAsFixed(0)} RWF',
-                    ),
-                  if (widget.booking.specialInstructions?.isNotEmpty == true)
-                    _InfoRow(
-                      icon: Icons.note,
-                      label: 'Special Instructions',
-                      value: widget.booking.specialInstructions!,
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Driver Information (if assigned)
-            if (_assignedDriver != null) ...[
-              _SectionCard(
-                title: 'Assigned Driver',
-                child: Column(
-                  children: [
-                    Row(
+                  _StatusBanner(booking: widget.booking),
+                  const SizedBox(height: 24),
+                  _SectionCard(
+                    title: 'Job Information',
+                    child: Column(
                       children: [
-                        CircleAvatar(
-                          radius: 25,
-                          backgroundColor: primaryGreen,
-                          child: Text(
-                            _assignedDriver!.name.isNotEmpty
-                                ? _assignedDriver!.name[0].toUpperCase()
-                                : 'D',
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
+                        _InfoRow(
+                          icon: Icons.inventory,
+                          label: 'Cargo Description',
+                          value: widget.booking.cargoDescription,
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                        _InfoRow(
+                          icon: Icons.location_on,
+                          label: 'Pickup Location',
+                          value: widget.booking.pickupLocation,
+                        ),
+                        _InfoRow(
+                          icon: Icons.flag,
+                          label: 'Dropoff Location',
+                          value: widget.booking.dropoffLocation,
+                        ),
+                        _InfoRow(
+                          icon: Icons.local_shipping,
+                          label: 'Vehicle Type',
+                          value: widget.booking.vehicleTypeDisplayName,
+                        ),
+                        if (widget.booking.weight != null)
+                          _InfoRow(
+                            icon: Icons.scale,
+                            label: 'Weight',
+                            value: '${widget.booking.weight}kg',
+                          ),
+                        if (widget.booking.estimatedPrice != null)
+                          _InfoRow(
+                            icon: Icons.money,
+                            label: 'Estimated Price',
+                            value:
+                                '${widget.booking.estimatedPrice!.toStringAsFixed(0)} RWF',
+                          ),
+                        if (widget.booking.specialInstructions?.isNotEmpty ==
+                            true)
+                          _InfoRow(
+                            icon: Icons.note,
+                            label: 'Special Instructions',
+                            value: widget.booking.specialInstructions!,
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Driver info (if assigned)
+                  if (_assignedDriver != null) ...[
+                    _SectionCard(
+                      title: 'Assigned Driver',
+                      child: Column(
+                        children: [
+                          Row(
                             children: [
-                              Text(
-                                _assignedDriver!.name,
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
+                              CircleAvatar(
+                                radius: 25,
+                                backgroundColor: primaryGreen,
+                                child: Text(
+                                  _assignedDriver!.name.isNotEmpty
+                                      ? _assignedDriver!.name[0].toUpperCase()
+                                      : 'D',
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
                                 ),
                               ),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  const Icon(Icons.star, size: 16, color: Colors.orange),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    _assignedDriver!.rating?.toStringAsFixed(1) ?? 'No rating',
-                                    style: const TextStyle(fontSize: 14),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  const Icon(Icons.work, size: 16, color: Colors.grey),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '${_assignedDriver!.completedJobs ?? 0} jobs',
-                                    style: const TextStyle(fontSize: 14),
-                                  ),
-                                ],
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _assignedDriver!.name,
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.star,
+                                            size: 16, color: Colors.orange),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          _assignedDriver!.rating
+                                                  ?.toStringAsFixed(1) ??
+                                              'No rating',
+                                          style:
+                                              const TextStyle(fontSize: 14),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        const Icon(Icons.work,
+                                            size: 16, color: Colors.grey),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '${_assignedDriver!.completedJobs ?? 0} jobs',
+                                          style:
+                                              const TextStyle(fontSize: 14),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
+                          if (widget.booking.status == BookingStatus.accepted ||
+                              widget.booking.status ==
+                                  BookingStatus.inProgress) ...[
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: _openChat,
+                                icon: const Icon(Icons.chat),
+                                label: const Text('Open Chat'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: primaryGreen,
+                                  foregroundColor: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // Timeline
+                  _SectionCard(
+                    title: 'Timeline',
+                    child: Column(
+                      children: [
+                        _TimelineItem(
+                          icon: Icons.add_circle,
+                          title: 'Job Created',
+                          subtitle: _formatDateTime(widget.booking.createdAt),
+                          isCompleted: true,
                         ),
+                        if (widget.booking.acceptedAt != null)
+                          _TimelineItem(
+                            icon: Icons.check_circle,
+                            title: 'Job Accepted',
+                            subtitle:
+                                _formatDateTime(widget.booking.acceptedAt!),
+                            isCompleted: true,
+                          ),
+                        if (widget.booking.status == BookingStatus.declined)
+                          const _TimelineItem(
+                            icon: Icons.cancel,
+                            title: 'Job Declined',
+                            subtitle: 'Driver declined this job',
+                            isCompleted: true,
+                            isError: true,
+                          ),
+                        if (widget.booking.status == BookingStatus.cancelled)
+                          const _TimelineItem(
+                            icon: Icons.cancel,
+                            title: 'Job Cancelled',
+                            subtitle: 'Job was cancelled',
+                            isCompleted: true,
+                            isError: true,
+                          ),
+                        if (widget.booking.completedAt != null)
+                          _TimelineItem(
+                            icon: Icons.check_circle_outline,
+                            title: 'Job Completed',
+                            subtitle:
+                                _formatDateTime(widget.booking.completedAt!),
+                            isCompleted: true,
+                          ),
                       ],
                     ),
-                    if (widget.booking.status == BookingStatus.confirmed) ...[
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: _openChat,
-                          icon: const Icon(Icons.chat),
-                          label: const Text('Open Chat'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: primaryGreen,
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-
-            // Timeline
-            _SectionCard(
-              title: 'Timeline',
-              child: Column(
-                children: [
-                  _TimelineItem(
-                    icon: Icons.add_circle,
-                    title: 'Job Created',
-                    subtitle: _formatDateTime(widget.booking.createdAt),
-                    isCompleted: true,
                   ),
-                  if (widget.booking.acceptedAt != null)
-                    _TimelineItem(
-                      icon: Icons.check_circle,
-                      title: 'Job Accepted',
-                      subtitle: _formatDateTime(widget.booking.acceptedAt!),
-                      isCompleted: true,
-                    ),
-                  if (widget.booking.status == BookingStatus.cancelled)
-                    _TimelineItem(
-                      icon: Icons.cancel,
-                      title: 'Job Declined',
-                      subtitle: 'Driver declined this job',
-                      isCompleted: true,
-                      isError: true,
-                    ),
-                  if (widget.booking.completedAt != null)
-                    _TimelineItem(
-                      icon: Icons.check_circle_outline,
-                      title: 'Job Completed',
-                      subtitle: _formatDateTime(widget.booking.completedAt!),
-                      isCompleted: true,
-                    ),
+                  const SizedBox(height: 24),
+
+                  // Action buttons
+                  if (isCargoOwner) ..._buildCargoOwnerActions(),
+                  if (!isCargoOwner) ..._buildDriverActions(),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
-
-            // Action Buttons
-            if (isCargoOwner) ..._buildCargoOwnerActions(),
-            if (!isCargoOwner) ..._buildDriverActions(),
-          ],
-        ),
-      ),
     );
   }
 
@@ -270,9 +289,8 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
             ),
           ),
         ];
-      // No 'declined' status in BookingStatus enum; handle as 'cancelled' or remove
-        case BookingStatus.confirmed:
-        case BookingStatus.inProgress:
+      case BookingStatus.accepted:
+      case BookingStatus.inProgress:
         return [
           SizedBox(
             width: double.infinity,
@@ -282,6 +300,21 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
               label: const Text('Chat with Driver'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryGreen,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ),
+        ];
+      case BookingStatus.declined:
+        return [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _reassignJob,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Find Another Driver'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
                 foregroundColor: Colors.white,
               ),
             ),
@@ -304,9 +337,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
                 Text(
                   'Job completed successfully!',
                   style: TextStyle(
-                    color: Colors.green,
-                    fontWeight: FontWeight.bold,
-                  ),
+                      color: Colors.green, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -328,10 +359,8 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
                 SizedBox(width: 12),
                 Text(
                   'Job was cancelled',
-                  style: TextStyle(
-                    color: Colors.red,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style:
+                      TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -342,7 +371,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
 
   List<Widget> _buildDriverActions() {
     switch (widget.booking.status) {
-      case BookingStatus.confirmed:
+      case BookingStatus.accepted:
         return [
           SizedBox(
             width: double.infinity,
@@ -385,13 +414,8 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final isCargoOwner = authProvider.user?.role == UserRole.cargoOwner;
 
-    String otherUserName;
-    if (isCargoOwner) {
-      otherUserName = _assignedDriver?.name ?? 'Driver';
-    } else {
-      // For drivers, we need to get cargo owner name (you might want to load this)
-      otherUserName = 'Cargo Owner';
-    }
+    final otherUserName =
+        isCargoOwner ? (_assignedDriver?.name ?? 'Driver') : 'Cargo Owner';
 
     Navigator.push(
       context,
@@ -404,9 +428,46 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
     );
   }
 
-  // _reassignJob removed as it is not used and there is no 'declined' status.
+  void _reassignJob() async {
+    final bookingProvider =
+        Provider.of<BookingProvider>(context, listen: false);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Find Another Driver'),
+        content: const Text(
+            'This will make the job available to other drivers. Continue?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('No'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+            child: const Text('Yes'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      final success = await bookingProvider.reassignBooking(widget.booking.id);
+      if (success && mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Job is now available for other drivers'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    }
+  }
 
   void _cancelJob() async {
+    final bookingProvider =
+        Provider.of<BookingProvider>(context, listen: false);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -427,9 +488,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
     );
 
     if (confirmed == true) {
-      final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
       final success = await bookingProvider.cancelBooking(widget.booking.id);
-
       if (success && mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -443,6 +502,8 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
   }
 
   void _completeJob() async {
+    final bookingProvider =
+        Provider.of<BookingProvider>(context, listen: false);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -463,9 +524,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
     );
 
     if (confirmed == true) {
-      final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
       final success = await bookingProvider.completeBooking(widget.booking.id);
-
       if (success && mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -479,7 +538,8 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
   }
 
   String _formatDateTime(DateTime dateTime) {
-    return '${dateTime.day}/${dateTime.month}/${dateTime.year} at ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+    return '${dateTime.day}/${dateTime.month}/${dateTime.year} at '
+        '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
   }
 }
 
@@ -498,7 +558,17 @@ class _StatusBanner extends StatelessWidget {
       case BookingStatus.pending:
         statusColor = Colors.orange;
         statusIcon = Icons.pending;
-          statusMessage = 'Waiting for driver confirmation';
+        statusMessage = 'Waiting for a driver to accept';
+        break;
+      case BookingStatus.accepted:
+        statusColor = primaryGreen;
+        statusIcon = Icons.check_circle;
+        statusMessage = 'Driver has accepted your job';
+        break;
+      case BookingStatus.declined:
+        statusColor = Colors.red;
+        statusIcon = Icons.cancel;
+        statusMessage = 'Driver declined — you can reassign';
         break;
       case BookingStatus.inProgress:
         statusColor = Colors.purple;
@@ -515,20 +585,15 @@ class _StatusBanner extends StatelessWidget {
         statusIcon = Icons.cancel;
         statusMessage = 'Job was cancelled';
         break;
-        case BookingStatus.confirmed:
-          statusColor = primaryGreen;
-          statusIcon = Icons.check_circle;
-          statusMessage = 'Driver has confirmed your job';
-          break;
     }
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: statusColor.withOpacity(0.1),
+        color: statusColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: statusColor.withOpacity(0.3)),
+        border: Border.all(color: statusColor.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -551,7 +616,7 @@ class _StatusBanner extends StatelessWidget {
                   statusMessage,
                   style: TextStyle(
                     fontSize: 14,
-                    color: statusColor.withOpacity(0.8),
+                    color: statusColor.withValues(alpha: 0.8),
                   ),
                 ),
               ],
@@ -567,10 +632,7 @@ class _SectionCard extends StatelessWidget {
   final String title;
   final Widget child;
 
-  const _SectionCard({
-    required this.title,
-    required this.child,
-  });
+  const _SectionCard({required this.title, required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -582,10 +644,7 @@ class _SectionCard extends StatelessWidget {
           children: [
             Text(
               title,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             child,
@@ -601,11 +660,7 @@ class _InfoRow extends StatelessWidget {
   final String label;
   final String value;
 
-  const _InfoRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
+  const _InfoRow({required this.icon, required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -632,9 +687,7 @@ class _InfoRow extends StatelessWidget {
                 Text(
                   value,
                   style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
+                      fontSize: 14, fontWeight: FontWeight.w500),
                 ),
               ],
             ),
@@ -662,8 +715,8 @@ class _TimelineItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isError ? Colors.red : (isCompleted ? Colors.green : Colors.grey);
-
+    final color =
+        isError ? Colors.red : (isCompleted ? Colors.green : Colors.grey);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -677,18 +730,14 @@ class _TimelineItem extends StatelessWidget {
                 Text(
                   title,
                   style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: color),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade600,
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                 ),
               ],
             ),

@@ -13,7 +13,6 @@ import 'screens/email_verification_screen.dart';
 import 'screens/home.dart';
 import 'screens/personal_data_screen.dart';
 import 'providers/auth_provider.dart';
-import 'providers/onboarding_provider.dart';
 import 'features/profile/providers/profile_provider.dart';
 import 'features/booking/providers/booking_provider.dart';
 import 'core/repositories/user_repository.dart';
@@ -39,7 +38,6 @@ class MyApp extends StatelessWidget {
       child: MultiProvider(
         providers: [
           ChangeNotifierProvider(create: (_) => AuthProvider()),
-          ChangeNotifierProvider(create: (_) => ButtonProvider()),
           ProxyProvider0<UserRepository>(
             update: (_, _) => FirebaseUserRepository(),
           ),

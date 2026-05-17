@@ -1,4 +1,5 @@
 import '../../../../widgets/app_states.dart';
+import 'package:cargo_app/core/enums/app_enums.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/models/booking_model.dart';

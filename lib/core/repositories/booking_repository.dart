@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../enums/app_enums.dart';
 import '../models/booking_model.dart';
 
 abstract class BookingRepository {

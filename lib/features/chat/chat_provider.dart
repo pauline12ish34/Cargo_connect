@@ -41,7 +41,7 @@ class ChatProvider with ChangeNotifier {
     required String senderId,
     required String senderName,
     required String content,
-    required String recipientId, // Add recipientId
+    String recipientId = '',
     MessageType type = MessageType.text,
   }) async {
     try {
@@ -140,6 +140,7 @@ class ChatProvider with ChangeNotifier {
       senderId: 'system',
       senderName: 'System',
       content: content,
+      recipientId: '',
       type: MessageType.system,
     );
   }

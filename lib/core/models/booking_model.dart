@@ -149,8 +149,10 @@ class BookingModel {
     switch (status) {
       case BookingStatus.pending:
         return 'Pending';
-      case BookingStatus.confirmed:
-        return 'Confirmed';
+      case BookingStatus.accepted:
+        return 'Accepted';
+      case BookingStatus.declined:
+        return 'Declined';
       case BookingStatus.inProgress:
         return 'In Progress';
       case BookingStatus.completed:
