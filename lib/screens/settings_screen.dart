@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../core/enums/app_enums.dart';
 import '../core/repositories/user_repository.dart';
 import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
@@ -188,36 +189,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
             ),
             const SizedBox(height: 16),
-            // Driver Status Section
-            const Text(
-              'Driver Status',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+            // Driver Status Section — only shown for drivers
+            if (Provider.of<AuthProvider>(context, listen: false).user?.role ==
+                UserRole.driver) ...[
+              const Text(
+                'Driver Status',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Control your availability to receive job requests',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 14,
+              const SizedBox(height: 8),
+              Text(
+                'Control your availability to receive job requests',
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 14,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            
-            _buildSettingsTile(
-              icon: _isAvailable ? Icons.work : Icons.work_off,
-              title: 'Available for Jobs',
-              subtitle: _isAvailable 
-                ? 'You will receive job notifications'
-                : 'You won\'t receive job notifications',
-              value: _isAvailable,
-              onChanged: _updateAvailability,
-              enabled: !_isLoading,
-            ),
-            
-            const SizedBox(height: 32),
+              const SizedBox(height: 16),
+              _buildSettingsTile(
+                icon: _isAvailable ? Icons.work : Icons.work_off,
+                title: 'Available for Jobs',
+                subtitle: _isAvailable
+                    ? 'You will receive job notifications'
+                    : 'You won\'t receive job notifications',
+                value: _isAvailable,
+                onChanged: _updateAvailability,
+                enabled: !_isLoading,
+              ),
+              const SizedBox(height: 32),
+            ],
             
             // Notification Settings
             const Text(

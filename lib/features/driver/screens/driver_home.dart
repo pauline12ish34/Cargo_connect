@@ -798,41 +798,16 @@ class _ProfileTab extends StatelessWidget {
   }
 
   Future<void> _performLogout(BuildContext context) async {
-    // Show loading indicator
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return const AlertDialog(
-          content: Row(
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(width: 16),
-              Text('Logging out...'),
-            ],
-          ),
-        );
-      },
-    );
-
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
     try {
-      // Perform logout
-      await Provider.of<AuthProvider>(context, listen: false).signOut();
-
-      // Clear profile data
-      Provider.of<ProfileProvider>(context, listen: false).logout();
-
-      // Navigate to login screen and clear navigation stack
+      await authProvider.signOut();
+      profileProvider.logout();
       if (context.mounted) {
-        Navigator.of(context).pushNamedAndRemoveUntil(
-          '/login',
-          (route) => false,
-        );
+        Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
       }
     } catch (e) {
-      // Hide loading dialog and show error
       if (context.mounted) {
-        Navigator.of(context).pop(); // Hide loading dialog
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Logout failed: $e'),

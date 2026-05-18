@@ -12,6 +12,7 @@ abstract class BookingRepository {
   Stream<List<BookingModel>> getBookingsStreamByCargoOwner(String cargoOwnerId);
   Stream<List<BookingModel>> getBookingsStreamByDriver(String driverId);
   Stream<List<BookingModel>> getPendingBookingsStreamForDriver(String driverId);
+  Future<void> assignDriverToBooking(String bookingId, String driverId);
   Future<void> acceptBooking(String bookingId, String driverId);
   Future<void> declineBooking(String bookingId, String driverId);
   Future<void> completeBooking(String bookingId);
@@ -93,10 +94,9 @@ class FirebaseBookingRepository implements BookingRepository {
   @override
   Future<List<BookingModel>> getPendingBookingsForDriver(String driverId) async {
     try {
-      // Get all pending bookings where the driver hasn't been assigned yet
-      // or where this specific driver was selected but hasn't responded
       final query = await _firestore
           .collection(_collectionName)
+          .where('driverId', isEqualTo: driverId)
           .where('status', isEqualTo: 'pending')
           .orderBy('createdAt', descending: true)
           .get();
@@ -135,12 +135,25 @@ class FirebaseBookingRepository implements BookingRepository {
   Stream<List<BookingModel>> getPendingBookingsStreamForDriver(String driverId) {
     return _firestore
         .collection(_collectionName)
+        .where('driverId', isEqualTo: driverId)
         .where('status', isEqualTo: 'pending')
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) => snapshot.docs
-        .map((doc) => BookingModel.fromFirestore(doc))
-        .toList());
+            .map((doc) => BookingModel.fromFirestore(doc))
+            .toList());
+  }
+
+  @override
+  Future<void> assignDriverToBooking(String bookingId, String driverId) async {
+    try {
+      await _firestore.collection(_collectionName).doc(bookingId).update({
+        'driverId': driverId,
+        'status': BookingStatus.pending.toString().split('.').last,
+      });
+    } catch (e) {
+      throw Exception('Failed to assign driver: $e');
+    }
   }
 
   @override

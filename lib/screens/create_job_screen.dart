@@ -56,7 +56,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
       builder: (context) => const Center(child: CircularProgressIndicator()),
     );
 
-    final success = await bookingProvider.createBooking(
+    final bookingId = await bookingProvider.createBooking(
       cargoOwnerId: authProvider.user!.uid,
       pickupLocation: _pickupController.text.trim(),
       dropoffLocation: _dropoffController.text.trim(),
@@ -75,7 +75,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
 
     Navigator.of(context).pop(); // Remove loading dialog
 
-    if (success && mounted) {
+    if (bookingId != null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Job created! Select a driver.')),
       );
@@ -84,6 +84,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
           vehicleType: _selectedVehicleType,
           pickupLocation: _pickupController.text.trim(),
           dropoffLocation: _dropoffController.text.trim(),
+          bookingId: bookingId,
         ),
       ));
     } else if (mounted) {

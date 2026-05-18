@@ -35,8 +35,8 @@ class BookingProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // Create a new booking
-  Future<bool> createBooking({
+  // Create a new booking — returns the new booking ID or null on failure
+  Future<String?> createBooking({
     required String cargoOwnerId,
     required String pickupLocation,
     required String dropoffLocation,
@@ -65,12 +65,38 @@ class BookingProvider with ChangeNotifier {
       );
 
       final bookingId = await _bookingRepository.createBooking(booking);
-
       _myBookings.insert(0, booking.copyWith(id: bookingId));
+      return bookingId;
+    } catch (e) {
+      _setError('Failed to create booking: $e');
+      return null;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Assign a specific driver to a pending booking and notify them
+  Future<bool> assignDriverToBooking(String bookingId, String driverId) async {
+    try {
+      _setLoading(true);
+      _setError(null);
+      await _bookingRepository.assignDriverToBooking(bookingId, driverId);
+
+      final index = _myBookings.indexWhere((b) => b.id == bookingId);
+      if (index != -1) {
+        _myBookings[index] = _myBookings[index].copyWith(driverId: driverId);
+        notifyListeners();
+      }
+
+      await JobNotificationService.notifyJobStatus(
+        recipientId: driverId,
+        status: 'selected',
+        bookingId: bookingId,
+      );
 
       return true;
     } catch (e) {
-      _setError('Failed to create booking: $e');
+      _setError('Failed to assign driver: $e');
       return false;
     } finally {
       _setLoading(false);
