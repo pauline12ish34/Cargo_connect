@@ -490,7 +490,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
     if (confirmed == true) {
       final success = await bookingProvider.cancelBooking(widget.booking.id);
       if (success && mounted) {
-        Navigator.pop(context);
+        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Job cancelled successfully'),

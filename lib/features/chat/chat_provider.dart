@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 
 import '../../core/models/chat_model.dart';
 import '../../core/repositories/chat_repository.dart';
-import '../../services/cloud_function_service.dart';
+import '../../services/cloud_function_service.dart' as notification_service;
+import '../../core/repositories/user_repository.dart';
 
 class ChatProvider with ChangeNotifier {
   final ChatRepository _chatRepository;
@@ -63,14 +64,24 @@ class ChatProvider with ChangeNotifier {
       _messages.add(message.copyWith(id: messageId));
       notifyListeners();
 
+
       // Send push notification to recipient
-      await CloudFunctionService.sendNotificationToUser(
-        recipientId,
-        {
-          'type': 'chat',
-          'message': 'New message from $senderName',
-        },
-      );
+      if (recipientId.isNotEmpty) {
+        try {
+          final userRepo = FirebaseUserRepository();
+          final recipient = await userRepo.getUserById(recipientId);
+          final fcmToken = recipient?.fcmToken;
+          if (fcmToken != null && fcmToken.isNotEmpty) {
+            await notification_service.NotificationService.sendNotificationToUser({
+              'token': fcmToken,
+              'title': 'New message from $senderName',
+              'body': content,
+            });
+          }
+        } catch (e) {
+          debugPrint('Failed to send chat notification: $e');
+        }
+      }
 
       return true;
     } catch (e) {

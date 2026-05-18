@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/models/booking_model.dart';
 import '../../../core/enums/app_enums.dart';
-
 import '../../../core/repositories/booking_repository.dart';
 import '../../../services/job_notification_service.dart';
 
@@ -88,11 +87,16 @@ class BookingProvider with ChangeNotifier {
         notifyListeners();
       }
 
-      await JobNotificationService.notifyJobStatus(
-        recipientId: driverId,
-        status: 'selected',
-        bookingId: bookingId,
-      );
+      // Notify driver of assignment
+      try {
+        await JobNotificationService.notifyJobStatus(
+          recipientId: driverId,
+          status: 'assigned',
+          bookingId: bookingId,
+        );
+      } catch (e) {
+        debugPrint('Failed to send driver notification: $e');
+      }
 
       return true;
     } catch (e) {
@@ -214,8 +218,21 @@ class BookingProvider with ChangeNotifier {
     try {
       _setLoading(true);
       _setError(null);
+
+      final bookingIndex = _availableBookings.indexWhere((b) => b.id == bookingId);
+      final booking = bookingIndex != -1 ? _availableBookings[bookingIndex] : null;
+
       await _bookingRepository.declineBooking(bookingId, driverId);
       _availableBookings.removeWhere((b) => b.id == bookingId);
+
+      if (booking != null) {
+        await JobNotificationService.notifyJobStatus(
+          recipientId: booking.cargoOwnerId,
+          status: 'declined',
+          bookingId: bookingId,
+        );
+      }
+
       return true;
     } catch (e) {
       _setError('Failed to decline booking: $e');
@@ -246,12 +263,13 @@ class BookingProvider with ChangeNotifier {
           status: 'completed',
           bookingId: bookingId,
         );
-        // Notify driver of job completion (optional)
-        await JobNotificationService.notifyJobStatus(
-          recipientId: updated.driverId!,
-          status: 'completed',
-          bookingId: bookingId,
-        );
+        if (updated.driverId != null) {
+          await JobNotificationService.notifyJobStatus(
+            recipientId: updated.driverId!,
+            status: 'completed',
+            bookingId: bookingId,
+          );
+        }
       }
 
       return true;
@@ -283,12 +301,14 @@ class BookingProvider with ChangeNotifier {
           status: 'cancelled',
           bookingId: bookingId,
         );
-        // Notify driver of job cancellation
-        await JobNotificationService.notifyJobStatus(
-          recipientId: updated.driverId!,
-          status: 'cancelled',
-          bookingId: bookingId,
-        );
+        // Notify driver if one was assigned
+        if (updated.driverId != null) {
+          await JobNotificationService.notifyJobStatus(
+            recipientId: updated.driverId!,
+            status: 'cancelled',
+            bookingId: bookingId,
+          );
+        }
       }
 
       return true;

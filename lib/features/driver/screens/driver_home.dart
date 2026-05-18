@@ -1,16 +1,9 @@
-import '../../../../widgets/app_states.dart';
 import 'package:cargo_app/core/enums/app_enums.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/models/booking_model.dart';
-import '../../../core/models/user_model.dart';
 import '../../../features/booking/providers/booking_provider.dart';
 import '../../../providers/auth_provider.dart';
-import '../../../widgets/profile_header.dart';
-import '../../../widgets/stats_card.dart';
-import '../../../widgets/app_top_bar.dart';
-import '../../../mixins/image_picker_mixin.dart';
-import '../../../mixins/logout_mixin.dart';
 import '../../../constants.dart';
 import '../../../screens/driver_profile_edit_screen.dart';
 import '../../../screens/vehicle_details_screen.dart';

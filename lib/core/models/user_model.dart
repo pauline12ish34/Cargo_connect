@@ -39,6 +39,9 @@ class UserModel {
   final String? postalCode;
   final String? country;
 
+  // FCM push notification token
+  final String? fcmToken;
+
   UserModel({
     required this.uid,
     required this.name,
@@ -69,6 +72,7 @@ class UserModel {
     this.state,
     this.postalCode,
     this.country,
+    this.fcmToken,
   });
 
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
@@ -107,6 +111,7 @@ class UserModel {
       state: data['state'],
       postalCode: data['postalCode'],
       country: data['country'],
+      fcmToken: data['fcmToken'],
     );
   }
 
@@ -140,8 +145,11 @@ class UserModel {
       if (state != null) 'state': state,
       if (postalCode != null) 'postalCode': postalCode,
       if (country != null) 'country': country,
+      if (fcmToken != null) 'fcmToken': fcmToken,
     };
   }
+
+  Map<String, dynamic> toJson() => toFirestore();
 
   UserModel copyWith({
     String? name,
@@ -171,6 +179,7 @@ class UserModel {
     String? state,
     String? postalCode,
     String? country,
+    String? fcmToken,
   }) {
     return UserModel(
       uid: uid,
@@ -202,6 +211,7 @@ class UserModel {
       state: state ?? this.state,
       postalCode: postalCode ?? this.postalCode,
       country: country ?? this.country,
+      fcmToken: fcmToken ?? this.fcmToken,
     );
   }
 

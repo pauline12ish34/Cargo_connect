@@ -8,11 +8,15 @@ class DeviceTokenService {
     final user = FirebaseAuth.instance.currentUser;
     final resolvedUserId = userId ?? user?.uid;
     final resolvedToken = token ?? await PushNotificationService.getToken();
+    print('Device token: ${resolvedToken ?? 'null'}');
     if (resolvedUserId != null && resolvedToken != null) {
       await FirebaseFirestore.instance
           .collection('users')
           .doc(resolvedUserId)
-          .update({'deviceToken': resolvedToken});
+          .update({'fcmToken': resolvedToken});
+    } else {
+      print('Failed to get device token or user id. User: '
+          '${resolvedUserId ?? 'null'}, Token: ${resolvedToken ?? 'null'}');
     }
   }
 

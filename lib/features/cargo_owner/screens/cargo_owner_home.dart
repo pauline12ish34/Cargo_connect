@@ -1,11 +1,9 @@
-import '../../../../widgets/app_states.dart';
 
 import 'package:cargo_app/constants.dart';
 import 'package:cargo_app/core/enums/app_enums.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/models/booking_model.dart';
-import '../../../core/models/user_model.dart';
 import '../../../features/booking/providers/booking_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../features/profile/providers/profile_provider.dart';
@@ -138,6 +136,14 @@ class _DashboardTab extends StatelessWidget {
     return Consumer2<AuthProvider, BookingProvider>(
       builder: (context, authProvider, bookingProvider, child) {
         final user = authProvider.user;
+        if (user == null) {
+          // Redirect to WelcomeScreen if not authenticated
+          Future.microtask(() {
+            Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+          });
+          return const Center(child: CircularProgressIndicator());
+        }
+
         final recentBookings = bookingProvider.myBookings.take(3).toList();
 
         return SingleChildScrollView(
@@ -157,7 +163,7 @@ class _DashboardTab extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Welcome back, ${user?.name ?? 'User'}!',
+                      'Welcome back, ${user.name}!',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
