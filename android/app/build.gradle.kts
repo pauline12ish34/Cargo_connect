@@ -32,8 +32,8 @@ android {
         applicationId = "com.example.cargo_app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = 21 // Set to 21 for Firebase compatibility
-        targetSdk = flutter.targetSdk?
+        minSdk = 21
+        targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         multiDexEnabled = true
