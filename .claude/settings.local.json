@@ -6,7 +6,8 @@
       "Bash(curl -s -X POST https://cargolink-notifications.onrender.com/send-notification -H \"Content-Type: application/json\" -H \"x-api-key: super-secret-api-key-2026\" -d '{\"token\":\"cVD7jM98T9K53w3wKRUZFV:APA91bHr6hRYz1RF1XqjYz-JQ_GQQP1uvXX_0mk_CDpdDm2WwLAVHy4_nLcGCDWJWe3yq8Wb8hOfa8vvZOQ9hlpK9eFPhD-Pz98nXlxC62HSCiIGEKKVlgI\",\"title\":\"Test\",\"body\":\"Notification working!\"}')",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(curl -s -X POST https://cargolink-notifications.onrender.com/send-notification -H \"Content-Type: application/json\" -H \"x-api-key: super-secret-api-key-2026\" -d '{\"token\":\"dvP9qgYrR3ChslCQsjL-G4:APA91bHwPmb-3UgkdVIDyO_PoOrC1C_EMi8Ov9dENVoytpzChZQpcOEUpqwvABuF7kLwCwQMYzfZ-p4udVcUA\",\"title\":\"Test for Driver\",\"body\":\"Sony phone - can you see this?\"}')"
     ]
   }
 }

@@ -8,18 +8,27 @@ class NotificationService {
   static const String _backendUrl = 'https://cargolink-notifications.onrender.com/send-notification';
   static const String _apiKey = 'super-secret-api-key-2026';
 
-  static Future<void> sendNotificationToUser(Map<String, String> payload) async {
+  static Future<void> sendNotificationToUser(
+    Map<String, String> payload, {
+    Map<String, String>? data,
+  }) async {
     debugPrint('📤 [Notification] Sending to backend: $_backendUrl');
-    debugPrint('📤 [Notification] Payload: $payload');
 
     try {
+      final body = {
+        'token': payload['token'],
+        'title': payload['title'],
+        'body': payload['body'],
+        if (data != null) 'data': data,
+      };
+
       final response = await http.post(
         Uri.parse(_backendUrl),
         headers: {
           'Content-Type': 'application/json',
           'x-api-key': _apiKey,
         },
-        body: jsonEncode(payload),
+        body: jsonEncode(body),
       ).timeout(const Duration(seconds: 60));
 
       if (response.statusCode == 200) {

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:cargo_app/services/cloud_function_service.dart' as notification_service;
+import 'package:cargo_app/services/notification_store_service.dart';
 import 'package:cargo_app/core/repositories/user_repository.dart';
 
 class JobNotificationService {
@@ -30,11 +31,19 @@ class JobNotificationService {
       final title = _titleFor(status);
       final body = _bodyFor(status, bookingId);
 
-      await notification_service.NotificationService.sendNotificationToUser({
-        'token': fcmToken,
-        'title': title,
-        'body': body,
-      });
+      await Future.wait([
+        notification_service.NotificationService.sendNotificationToUser(
+          {'token': fcmToken, 'title': title, 'body': body},
+          data: {'type': 'job', 'bookingId': bookingId, 'status': status},
+        ),
+        NotificationStoreService.storeNotification(
+          recipientId: recipientId,
+          title: title,
+          body: body,
+          type: 'job',
+          bookingId: bookingId,
+        ),
+      ]);
 
       debugPrint('✅ [JobNotification] Notification dispatched for $recipientId');
     } catch (e) {

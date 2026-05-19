@@ -25,40 +25,14 @@ mixin LogoutMixin {
                 final authProv = Provider.of<AuthProvider>(context, listen: false);
                 final profileProv = Provider.of<ProfileProvider>(context, listen: false);
 
-                // Show loading indicator
-                showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (_) => const AlertDialog(
-                    content: Row(
-                      children: [
-                        CircularProgressIndicator(),
-                        SizedBox(width: 16),
-                        Text('Logging out...'),
-                      ],
-                    ),
-                  ),
-                );
+                // Navigate to login immediately — avoids black screen while
+                // auth state listener fires during async sign-out
+                profileProv.logout();
+                authProv.clearError();
+                navigator.pushNamedAndRemoveUntil('/login', (route) => false);
 
-                try {
-                  await authProv.signOut();
-                  profileProv.logout();
-                  authProv.clearError();
-
-                  // Pop loading dialog, then clear the full stack and go to login
-                  navigator.pop();
-                  navigator.pushNamedAndRemoveUntil('/login', (route) => false);
-                } catch (e) {
-                  navigator.pop(); // dismiss loading dialog
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Logout failed: $e'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                }
+                // Sign out in background after navigation
+                authProv.signOut();
               },
               child: const Text('Log Out'),
             ),

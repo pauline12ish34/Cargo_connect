@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../core/models/chat_model.dart';
+import '../../services/notification_store_service.dart';
 import '../../core/repositories/chat_repository.dart';
 import '../../services/cloud_function_service.dart' as notification_service;
 import '../../core/repositories/user_repository.dart';
@@ -66,7 +67,7 @@ class ChatProvider with ChangeNotifier {
 
       // Send push notification to recipient — fire and forget, never block chat
       if (recipientId.isNotEmpty) {
-        unawaited(_sendChatNotification(recipientId, senderName, content));
+        unawaited(_sendChatNotification(recipientId, senderName, content, bookingId));
       }
 
       return true;
@@ -76,7 +77,8 @@ class ChatProvider with ChangeNotifier {
     }
   }
 
-  Future<void> _sendChatNotification(String recipientId, String senderName, String content) async {
+  Future<void> _sendChatNotification(
+      String recipientId, String senderName, String content, String bookingId) async {
     try {
       final userRepo = FirebaseUserRepository();
       final recipient = await userRepo.getUserById(recipientId);
@@ -85,11 +87,20 @@ class ChatProvider with ChangeNotifier {
         debugPrint('⚠️  [Chat] No fcmToken for recipient $recipientId');
         return;
       }
-      await notification_service.NotificationService.sendNotificationToUser({
-        'token': fcmToken,
-        'title': 'New message from $senderName',
-        'body': content,
-      });
+      await Future.wait([
+        notification_service.NotificationService.sendNotificationToUser(
+          {'token': fcmToken, 'title': 'New message from $senderName', 'body': content},
+          data: {'type': 'chat', 'bookingId': bookingId, 'senderName': senderName},
+        ),
+        NotificationStoreService.storeNotification(
+          recipientId: recipientId,
+          title: 'New message from $senderName',
+          body: content,
+          type: 'chat',
+          bookingId: bookingId,
+          senderName: senderName,
+        ),
+      ]);
       debugPrint('✅ [Chat] Notification sent to $recipientId');
     } catch (e) {
       debugPrint('❌ [Chat] Failed to send chat notification: $e');

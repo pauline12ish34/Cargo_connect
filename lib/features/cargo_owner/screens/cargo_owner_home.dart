@@ -7,6 +7,8 @@ import '../../../core/models/booking_model.dart';
 import '../../../features/booking/providers/booking_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../features/profile/providers/profile_provider.dart';
+import '../../../services/notification_store_service.dart';
+import '../../../screens/notifications_screen.dart';
 import '../../../screens/create_job_screen.dart';
 import '../../../screens/job_details_screen.dart';
 import '../../../screens/settings_screen.dart';
@@ -34,7 +36,7 @@ class _CargoOwnerHomeState extends State<CargoOwnerHome> {
     final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
 
     if (authProvider.user != null) {
-      bookingProvider.loadCargoOwnerBookings(authProvider.user!.uid);
+      bookingProvider.startRealtimeCargoOwnerBookings(authProvider.user!.uid);
     }
   }
 
@@ -77,10 +79,49 @@ class _CargoOwnerHomeState extends State<CargoOwnerHome> {
         foregroundColor: Colors.black,
         automaticallyImplyLeading: false,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications),
-            onPressed: () {
-              // TODO: Implement notifications
+          Consumer<AuthProvider>(
+            builder: (context, auth, _) {
+              if (auth.user == null) return const SizedBox.shrink();
+              return StreamBuilder<int>(
+                stream: NotificationStoreService.unreadCountStream(auth.user!.uid),
+                builder: (context, snapshot) {
+                  final count = snapshot.data ?? 0;
+                  return Stack(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.notifications),
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const NotificationsScreen(),
+                          ),
+                        ),
+                      ),
+                      if (count > 0)
+                        Positioned(
+                          right: 8,
+                          top: 8,
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                            constraints: const BoxConstraints(
+                                minWidth: 16, minHeight: 16),
+                            child: Text(
+                              count > 99 ? '99+' : '$count',
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              );
             },
           ),
         ],

@@ -23,9 +23,10 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'services/push_notification_service.dart';
 import 'services/device_token_service.dart';
 
-/// Global key so PushNotificationService can show SnackBars without a BuildContext.
 final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
     GlobalKey<ScaffoldMessengerState>();
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 /// Must be a top-level function. Called by FCM when the app is terminated/background.
 /// The [notification] field in the payload means FCM auto-shows the system notification,
@@ -112,7 +113,7 @@ class _AppBootstrapState extends State<_AppBootstrap> {
       DeviceTokenService.saveDeviceToken();
       DeviceTokenService.listenForTokenRefresh();
       // Notification listeners registered once here — uses the global key.
-      PushNotificationService.initialize(scaffoldMessengerKey);
+      PushNotificationService.initialize(scaffoldMessengerKey, navigatorKey);
     });
   }
 
@@ -124,6 +125,7 @@ class _AppBootstrapState extends State<_AppBootstrap> {
           title: 'CargoLink',
           debugShowCheckedModeBanner: false,
           scaffoldMessengerKey: scaffoldMessengerKey,
+          navigatorKey: navigatorKey,
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode:

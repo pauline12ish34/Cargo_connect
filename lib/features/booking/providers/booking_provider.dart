@@ -15,6 +15,9 @@ class BookingProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _error;
 
+  StreamSubscription? _myBookingsSubscription;
+  StreamSubscription? _availableBookingsSubscription;
+
   List<BookingModel> get myBookings => _myBookings;
   List<BookingModel> get availableBookings => _availableBookings;
   bool get isLoading => _isLoading;
@@ -33,6 +36,44 @@ class BookingProvider with ChangeNotifier {
   void clearError() {
     _error = null;
     notifyListeners();
+  }
+
+  // Start real-time stream for driver — replaces one-time load calls
+  void startRealtimeDriverBookings(String driverId) {
+    _myBookingsSubscription?.cancel();
+    _availableBookingsSubscription?.cancel();
+
+    _myBookingsSubscription = _bookingRepository
+        .getBookingsStreamByDriver(driverId)
+        .listen((bookings) {
+      _myBookings = bookings;
+      notifyListeners();
+    });
+
+    _availableBookingsSubscription = _bookingRepository
+        .getPendingBookingsStreamForDriver(driverId)
+        .listen((bookings) {
+      _availableBookings = bookings;
+      notifyListeners();
+    });
+  }
+
+  // Start real-time stream for cargo owner
+  void startRealtimeCargoOwnerBookings(String cargoOwnerId) {
+    _myBookingsSubscription?.cancel();
+    _myBookingsSubscription = _bookingRepository
+        .getBookingsStreamByCargoOwner(cargoOwnerId)
+        .listen((bookings) {
+      _myBookings = bookings;
+      notifyListeners();
+    });
+  }
+
+  void stopRealtimeBookings() {
+    _myBookingsSubscription?.cancel();
+    _availableBookingsSubscription?.cancel();
+    _myBookingsSubscription = null;
+    _availableBookingsSubscription = null;
   }
 
   // Create a new booking — returns the new booking ID or null on failure
