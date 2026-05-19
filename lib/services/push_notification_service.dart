@@ -5,6 +5,9 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:cargo_app/core/repositories/booking_repository.dart';
 import 'package:cargo_app/features/chat/chat_screen.dart';
 
+// Tracks which chat booking is currently open — set by ChatScreen
+String? activeChatBookingId;
+
 class PushNotificationService {
   static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
   static final FlutterLocalNotificationsPlugin _localNotifications =
@@ -62,6 +65,12 @@ class PushNotificationService {
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       final notification = message.notification;
       if (notification == null) return;
+
+      // Suppress chat notification if user is already in that chat
+      if (message.data['type'] == 'chat' &&
+          message.data['bookingId'] == activeChatBookingId) {
+        return;
+      }
 
       _localNotifications.show(
         notification.hashCode,

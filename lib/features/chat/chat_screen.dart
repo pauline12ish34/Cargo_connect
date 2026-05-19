@@ -1,9 +1,13 @@
+import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/models/booking_model.dart';
 import '../../core/models/chat_model.dart';
 import '../../core/enums/app_enums.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/notification_store_service.dart';
+import '../../services/push_notification_service.dart' as pns;
 import 'chat_provider.dart';
 import 'package:cargo_app/constants.dart';
 
@@ -26,22 +30,52 @@ class _ChatScreenState extends State<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _isInitialized = false;
   bool _shouldScrollToBottom = true;
+  Timer? _typingTimer;
+  String? _currentUserId;
 
   @override
   void initState() {
     super.initState();
+    // Mark this chat as active — suppresses foreground popup notifications
+    pns.activeChatBookingId = widget.booking.id;
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       if (authProvider.user != null) {
+        _currentUserId = authProvider.user!.uid;
         Provider.of<ChatProvider>(context, listen: false)
-            .markMessagesAsRead(widget.booking.id, authProvider.user!.uid);
+            .markMessagesAsRead(widget.booking.id, _currentUserId!);
+        // Mark any stored chat notifications for this booking as read
+        NotificationStoreService.markChatNotificationsRead(
+            _currentUserId!, widget.booking.id);
       }
       setState(() => _isInitialized = true);
     });
+
+    _messageController.addListener(_onTyping);
+  }
+
+  void _onTyping() {
+    if (_currentUserId == null) return;
+    _typingTimer?.cancel();
+    _setTyping(true);
+    _typingTimer = Timer(const Duration(seconds: 2), () => _setTyping(false));
+  }
+
+  void _setTyping(bool isTyping) {
+    if (_currentUserId == null) return;
+    FirebaseFirestore.instance
+        .collection('typingStatus')
+        .doc(widget.booking.id)
+        .set({_currentUserId!: isTyping}, SetOptions(merge: true));
   }
 
   @override
   void dispose() {
+    _typingTimer?.cancel();
+    _setTyping(false);
+    pns.activeChatBookingId = null;
+    _messageController.removeListener(_onTyping);
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -67,6 +101,8 @@ class _ChatScreenState extends State<ChatScreen> {
     if (user == null) return;
 
     _messageController.clear();
+    _typingTimer?.cancel();
+    _setTyping(false);
     _shouldScrollToBottom = true;
 
     final recipientId = user.uid == widget.booking.cargoOwnerId
@@ -307,6 +343,15 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ),
 
+            // Typing indicator
+            _TypingIndicator(
+              bookingId: widget.booking.id,
+              otherUserId: _currentUserId == widget.booking.cargoOwnerId
+                  ? (widget.booking.driverId ?? '')
+                  : widget.booking.cargoOwnerId,
+              otherUserName: widget.otherUserName,
+            ),
+
             // Message input
             Container(
               padding: const EdgeInsets.all(12),
@@ -482,6 +527,115 @@ class _DetailRow extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _TypingIndicator extends StatefulWidget {
+  final String bookingId;
+  final String otherUserId;
+  final String otherUserName;
+
+  const _TypingIndicator({
+    required this.bookingId,
+    required this.otherUserId,
+    required this.otherUserName,
+  });
+
+  @override
+  State<_TypingIndicator> createState() => _TypingIndicatorState();
+}
+
+class _TypingIndicatorState extends State<_TypingIndicator>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _dot1, _dot2, _dot3;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat();
+    _dot1 = Tween(begin: 0.0, end: 1.0).animate(CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeInOut)));
+    _dot2 = Tween(begin: 0.0, end: 1.0).animate(CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.2, 0.8, curve: Curves.easeInOut)));
+    _dot3 = Tween(begin: 0.0, end: 1.0).animate(CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.4, 1.0, curve: Curves.easeInOut)));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.otherUserId.isEmpty) return const SizedBox.shrink();
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('typingStatus')
+          .doc(widget.bookingId)
+          .snapshots(),
+      builder: (context, snapshot) {
+        final data = snapshot.data?.data() as Map<String, dynamic>?;
+        final isTyping = data?[widget.otherUserId] == true;
+        if (!isTyping) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.only(left: 16, bottom: 4),
+          child: Row(
+            children: [
+              Text(
+                '${widget.otherUserName} is typing',
+                style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade600,
+                    fontStyle: FontStyle.italic),
+              ),
+              const SizedBox(width: 4),
+              AnimatedBuilder(
+                animation: _controller,
+                builder: (_, _) => Row(
+                  children: [
+                    _Dot(opacity: _dot1.value),
+                    _Dot(opacity: _dot2.value),
+                    _Dot(opacity: _dot3.value),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _Dot extends StatelessWidget {
+  final double opacity;
+  const _Dot({required this.opacity});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 1.5),
+      child: Opacity(
+        opacity: opacity,
+        child: Container(
+          width: 5,
+          height: 5,
+          decoration: BoxDecoration(
+            color: Colors.grey.shade500,
+            shape: BoxShape.circle,
+          ),
+        ),
       ),
     );
   }

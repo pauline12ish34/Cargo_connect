@@ -72,6 +72,27 @@ class NotificationStoreService {
     }
   }
 
+  static Future<void> markChatNotificationsRead(
+      String userId, String bookingId) async {
+    try {
+      final batch = _db.batch();
+      final docs = await _db
+          .collection('userNotifications')
+          .doc(userId)
+          .collection('items')
+          .where('isRead', isEqualTo: false)
+          .where('type', isEqualTo: 'chat')
+          .where('bookingId', isEqualTo: bookingId)
+          .get();
+      for (final doc in docs.docs) {
+        batch.update(doc.reference, {'isRead': true});
+      }
+      await batch.commit();
+    } catch (e) {
+      debugPrint('❌ [NotificationStore] Failed to mark chat read: $e');
+    }
+  }
+
   static Stream<List<Map<String, dynamic>>> notificationsStream(String userId) {
     return _db
         .collection('userNotifications')
