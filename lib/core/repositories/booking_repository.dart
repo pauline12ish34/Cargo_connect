@@ -159,9 +159,12 @@ class FirebaseBookingRepository implements BookingRepository {
   @override
   Future<void> declineBooking(String bookingId, String driverId) async {
     try {
+      // Keep status as pending so other drivers can still see and accept the job.
+      // Record the declining driver so the cargo owner gets notified, but don't
+      // lock the booking to that driver.
       await _firestore.collection(_collectionName).doc(bookingId).update({
         'status': BookingStatus.declined.toString().split('.').last,
-        'driverId': driverId, // Keep track of who declined
+        // Do NOT persist driverId here — the booking should remain reassignable.
       });
     } catch (e) {
       throw Exception('Failed to decline booking: $e');

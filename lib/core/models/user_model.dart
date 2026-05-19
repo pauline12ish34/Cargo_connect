@@ -220,8 +220,9 @@ class UserModel {
     'registration': vehicleRegistration,
   } : null;
   
-  // Mock total earnings (you might want to track this properly later)
-  int get totalEarnings => (completedJobs ?? 0) * 5000; // Mock calculation
+  // Placeholder — actual earnings are not yet tracked per-job in Firestore.
+  // Returns null so UI can display "--" instead of a fabricated number.
+  int? get totalEarnings => null;
   
   // Address getter that returns actual address information
   Map<String, String>? get address {

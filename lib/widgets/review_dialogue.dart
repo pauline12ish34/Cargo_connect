@@ -18,7 +18,7 @@ class ReviewDialog extends StatefulWidget {
 
 class _ReviewDialogState extends State<ReviewDialog> {
   double _rating = 4.5;
-  String _review = '';
+  String _reviewText = '';
   int _tip = 0;
 
   @override
@@ -77,7 +77,7 @@ class _ReviewDialogState extends State<ReviewDialog> {
                 ),
               ),
               maxLines: 4,
-              onChanged: (val) => _review = val,
+              onChanged: (val) => _reviewText = val,
             ),
 
             const SizedBox(height: 12),
@@ -134,11 +134,10 @@ class _ReviewDialogState extends State<ReviewDialog> {
               ),
 
               onPressed: () {
-                // Provider.of<CarProvider>(
-                //   context,
-                //   listen: false,
-                // ).submitReview(widget.carId, _review, _rating);
-                Navigator.pop(context); // close dialog
+                // TODO: persist _rating, _reviewText, and _tip to Firestore
+                // when the backend review endpoint is implemented.
+                debugPrint('Review submitted — rating: $_rating, text: $_reviewText, tip: \$$_tip');
+                Navigator.pop(context);
                 showDialog(
                   context: context,
                   builder: (_) => const ThankYouDialog(),

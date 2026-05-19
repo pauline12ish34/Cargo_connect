@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../constants.dart';
 import '../features/profile/providers/profile_provider.dart';
+import '../widgets/app_states.dart';
 
 class PersonalDataScreen extends StatefulWidget {
   const PersonalDataScreen({super.key});
@@ -14,7 +16,14 @@ class _PersonalDataScreenState extends State<PersonalDataScreen> {
   late TextEditingController _nameController;
   late TextEditingController _emailController;
   late TextEditingController _phoneController;
-  String _selectedAddress = 'Kigali';
+  late TextEditingController _streetController;
+  late TextEditingController _cityController;
+  late TextEditingController _stateController;
+  late TextEditingController _postalCodeController;
+  late TextEditingController _countryController;
+
+  bool _initialized = false;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -22,6 +31,11 @@ class _PersonalDataScreenState extends State<PersonalDataScreen> {
     _nameController = TextEditingController();
     _emailController = TextEditingController();
     _phoneController = TextEditingController();
+    _streetController = TextEditingController();
+    _cityController = TextEditingController();
+    _stateController = TextEditingController();
+    _postalCodeController = TextEditingController();
+    _countryController = TextEditingController();
   }
 
   @override
@@ -29,325 +43,303 @@ class _PersonalDataScreenState extends State<PersonalDataScreen> {
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
+    _streetController.dispose();
+    _cityController.dispose();
+    _stateController.dispose();
+    _postalCodeController.dispose();
+    _countryController.dispose();
     super.dispose();
+  }
+
+  void _initControllers(ProfileProvider profileProvider) {
+    if (_initialized) return;
+    final user = profileProvider.currentUser;
+    if (user == null) return;
+    _nameController.text = user.name;
+    _emailController.text = user.email;
+    _phoneController.text = user.phoneNumber;
+    _streetController.text = user.street ?? '';
+    _cityController.text = user.city ?? '';
+    _stateController.text = user.state ?? '';
+    _postalCodeController.text = user.postalCode ?? '';
+    _countryController.text = user.country ?? '';
+    _initialized = true;
+  }
+
+  Future<void> _save(ProfileProvider profileProvider) async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isSaving = true);
+
+    final current = profileProvider.currentUser;
+    if (current == null) {
+      setState(() => _isSaving = false);
+      return;
+    }
+
+    final updated = current.copyWith(
+      name: _nameController.text.trim(),
+      phoneNumber: _phoneController.text.trim(),
+      street: _streetController.text.trim().isEmpty ? null : _streetController.text.trim(),
+      city: _cityController.text.trim().isEmpty ? null : _cityController.text.trim(),
+      state: _stateController.text.trim().isEmpty ? null : _stateController.text.trim(),
+      postalCode: _postalCodeController.text.trim().isEmpty ? null : _postalCodeController.text.trim(),
+      country: _countryController.text.trim().isEmpty ? null : _countryController.text.trim(),
+    );
+
+    final success = await profileProvider.updateProfile(updated);
+
+    if (!mounted) return;
+    setState(() => _isSaving = false);
+
+    if (success) {
+      AppSnackbar.showSuccess(context, 'Your personal data has been saved.');
+      Navigator.pop(context);
+    } else {
+      AppSnackbar.showError(
+        context,
+        profileProvider.error ?? 'Could not save your data. Please try again.',
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7FAFC),
+      backgroundColor: surfaceColor,
       appBar: AppBar(
-        title: const Text(
-          'Personal Data',
-          style: TextStyle(
-            color: Color(0xFF2D3748),
-            fontWeight: FontWeight.bold,
-          ),
+        title: const Text('Personal Data'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          onPressed: () => Navigator.pop(context),
         ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF2D3748)),
       ),
       body: Consumer<ProfileProvider>(
         builder: (context, profileProvider, child) {
-          final user = profileProvider.currentUser;
-
-          if (user != null) {
-            // Initialize controllers with user data
-            if (_nameController.text.isEmpty) {
-              _nameController.text = user.name;
-              _emailController.text = user.email;
-              _phoneController.text = user.phoneNumber;
-            }
+          if (profileProvider.isLoading && !_initialized) {
+            return const AppLoading(message: 'Loading your profile…');
           }
 
+          _initControllers(profileProvider);
+
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Personal Details Section
-                _buildPersonalDetailsSection(),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _SectionLabel(label: 'Personal Details'),
+                  const SizedBox(height: 12),
+                  _FormCard(
+                    children: [
+                      _Field(
+                        controller: _nameController,
+                        label: 'Full Name',
+                        icon: Icons.person_outline,
+                        textInputAction: TextInputAction.next,
+                        validator: (v) =>
+                            (v == null || v.trim().isEmpty) ? 'Name is required' : null,
+                      ),
+                      _Field(
+                        controller: _emailController,
+                        label: 'Email',
+                        icon: Icons.email_outlined,
+                        keyboardType: TextInputType.emailAddress,
+                        readOnly: true, // email changes require re-auth
+                        hint: 'Email cannot be changed here',
+                      ),
+                      _Field(
+                        controller: _phoneController,
+                        label: 'Phone Number',
+                        icon: Icons.phone_outlined,
+                        keyboardType: TextInputType.phone,
+                        textInputAction: TextInputAction.next,
+                        validator: (v) =>
+                            (v == null || v.trim().isEmpty)
+                                ? 'Phone number is required'
+                                : null,
+                      ),
+                    ],
+                  ),
 
-                const SizedBox(height: 24),
+                  const SizedBox(height: 28),
 
-                // Delivery Address Section
-                _buildDeliveryAddressSection(),
+                  _SectionLabel(label: 'Address'),
+                  const SizedBox(height: 12),
+                  _FormCard(
+                    children: [
+                      _Field(
+                        controller: _streetController,
+                        label: 'Street',
+                        icon: Icons.home_outlined,
+                        textInputAction: TextInputAction.next,
+                      ),
+                      _Field(
+                        controller: _cityController,
+                        label: 'City',
+                        icon: Icons.location_city_outlined,
+                        textInputAction: TextInputAction.next,
+                      ),
+                      _Field(
+                        controller: _stateController,
+                        label: 'Province / State',
+                        icon: Icons.map_outlined,
+                        textInputAction: TextInputAction.next,
+                      ),
+                      _Field(
+                        controller: _postalCodeController,
+                        label: 'Postal Code',
+                        icon: Icons.local_post_office_outlined,
+                        keyboardType: TextInputType.number,
+                        textInputAction: TextInputAction.next,
+                      ),
+                      _Field(
+                        controller: _countryController,
+                        label: 'Country',
+                        icon: Icons.public_outlined,
+                        textInputAction: TextInputAction.done,
+                        isLast: true,
+                      ),
+                    ],
+                  ),
 
-                const SizedBox(height: 32),
+                  const SizedBox(height: 36),
 
-                // Save Button
-                _buildSaveButton(context),
-              ],
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _isSaving ? null : () => _save(profileProvider),
+                      child: _isSaving
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : const Text('SAVE CHANGES'),
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+                ],
+              ),
             ),
           );
         },
       ),
     );
   }
+}
 
-  Widget _buildPersonalDetailsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Personal Details',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF2D3748),
-          ),
-        ),
-        const SizedBox(height: 16),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                spreadRadius: 1,
-                blurRadius: 5,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              children: [
-                _buildFormField(
-                  controller: _nameController,
-                  label: 'Name',
-                  icon: Icons.person_outline,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your name';
-                    }
-                    return null;
-                  },
-                ),
-                const Divider(height: 1, indent: 56),
-                _buildFormField(
-                  controller: _emailController,
-                  label: 'Email',
-                  icon: Icons.email_outlined,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your email';
-                    }
-                    if (!RegExp(
-                      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                    ).hasMatch(value)) {
-                      return 'Please enter a valid email';
-                    }
-                    return null;
-                  },
-                ),
-                const Divider(height: 1, indent: 56),
-                _buildFormField(
-                  controller: _phoneController,
-                  label: 'Phone',
-                  icon: Icons.phone_outlined,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your phone number';
-                    }
-                    return null;
-                  },
-                ),
-                const Divider(height: 1, indent: 56),
-                _buildDropdownField(),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+// ─── Section Label ─────────────────────────────────────────────────────────────
 
-  Widget _buildFormField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    String? Function(String?)? validator,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          Icon(icon, color: const Color(0xFF64748B), size: 20),
-          const SizedBox(width: 16),
-          Expanded(
-            child: TextFormField(
-              controller: controller,
-              decoration: InputDecoration(
-                labelText: label,
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
-                labelStyle: const TextStyle(
-                  color: Color(0xFF64748B),
-                  fontSize: 14,
-                ),
-              ),
-              validator: validator,
-            ),
-          ),
-        ],
+class _SectionLabel extends StatelessWidget {
+  final String label;
+  const _SectionLabel({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label.toUpperCase(),
+      style: const TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        color: textGray,
+        letterSpacing: 1.2,
       ),
     );
   }
+}
 
-  Widget _buildDropdownField() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.location_on_outlined,
-            color: Color(0xFF64748B),
-            size: 20,
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: DropdownButtonFormField<String>(
-              initialValue: _selectedAddress,
-              decoration: const InputDecoration(
-                labelText: 'Address',
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
-                labelStyle: TextStyle(color: Color(0xFF64748B), fontSize: 14),
-              ),
-              items: const [
-                DropdownMenuItem(value: 'Kigali', child: Text('Kigali')),
-                DropdownMenuItem(value: 'Huye', child: Text('Huye')),
-                DropdownMenuItem(value: 'Musanze', child: Text('Musanze')),
-                DropdownMenuItem(value: 'Rubavu', child: Text('Rubavu')),
-              ],
-              onChanged: (value) {
-                setState(() {
-                  _selectedAddress = value!;
-                });
-              },
-            ),
-          ),
-        ],
+// ─── Form Card ────────────────────────────────────────────────────────────────
+
+class _FormCard extends StatelessWidget {
+  final List<Widget> children;
+  const _FormCard({required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(cardBorderRadius),
+        border: Border.all(color: borderGray.withOpacity(0.4)),
       ),
+      child: Column(children: children),
     );
   }
+}
 
-  Widget _buildDeliveryAddressSection() {
+// ─── Field ────────────────────────────────────────────────────────────────────
+
+class _Field extends StatelessWidget {
+  final TextEditingController controller;
+  final String label;
+  final IconData icon;
+  final TextInputType keyboardType;
+  final TextInputAction textInputAction;
+  final String? Function(String?)? validator;
+  final bool readOnly;
+  final String? hint;
+  final bool isLast;
+
+  const _Field({
+    required this.controller,
+    required this.label,
+    required this.icon,
+    this.keyboardType = TextInputType.text,
+    this.textInputAction = TextInputAction.next,
+    this.validator,
+    this.readOnly = false,
+    this.hint,
+    this.isLast = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Delivery Address',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF2D3748),
-          ),
-        ),
-        const SizedBox(height: 16),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                spreadRadius: 1,
-                blurRadius: 5,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildAddressField('Name', 'Ange Constance'),
-                const SizedBox(height: 12),
-                _buildAddressField('Address', 'KG 625 St'),
-                const SizedBox(height: 12),
-                _buildAddressField('Location', 'Kigali Rwanda'),
-                const SizedBox(height: 12),
-                _buildAddressField('Phone', '0789 000 000'),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      // Navigate to change delivery address
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Change Address - Coming Soon!'),
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFE1F3ED),
-                      foregroundColor: const Color(0xFF08914D),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: const Text('CHANGE'),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(icon, size: 20, color: textGray),
+              const SizedBox(width: 14),
+              Expanded(
+                child: TextFormField(
+                  controller: controller,
+                  keyboardType: keyboardType,
+                  textInputAction: textInputAction,
+                  validator: validator,
+                  readOnly: readOnly,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: readOnly ? textGray : textDark,
+                  ),
+                  decoration: InputDecoration(
+                    labelText: label,
+                    hintText: hint,
+                    border: InputBorder.none,
+                    contentPadding:
+                        const EdgeInsets.symmetric(vertical: 14),
+                    labelStyle:
+                        const TextStyle(color: textGray, fontSize: 13),
+                    hintStyle:
+                        TextStyle(color: textGray.withOpacity(0.6), fontSize: 12),
+                    errorStyle: const TextStyle(fontSize: 11),
                   ),
                 ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAddressField(String label, String value) {
-    return Row(
-      children: [
-        Text(
-          '$label: ',
-          style: const TextStyle(
-            fontWeight: FontWeight.w500,
-            color: Color(0xFF2D3748),
-          ),
-        ),
-        Expanded(
-          child: Text(value, style: const TextStyle(color: Color(0xFF64748B))),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSaveButton(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: () {
-          if (_formKey.currentState!.validate()) {
-            // Save personal data
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Personal data saved successfully!'),
-                backgroundColor: Color(0xFF08914D),
               ),
-            );
-            Navigator.pop(context);
-          }
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFE1F3ED),
-          foregroundColor: const Color(0xFF08914D),
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ],
+          ),
         ),
-        child: const Text(
-          'SAVE',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-        ),
-      ),
+        if (!isLast) const Divider(height: 1, indent: 50),
+      ],
     );
   }
 }

@@ -5,6 +5,7 @@ import '../core/models/user_model.dart';
 import '../core/repositories/user_repository.dart';
 import '../providers/auth_provider.dart';
 import '../mixins/image_picker_mixin.dart';
+import '../widgets/app_states.dart';
 
 class DriverProfileEditScreen extends StatefulWidget {
   const DriverProfileEditScreen({super.key});
@@ -40,11 +41,7 @@ class _DriverProfileEditScreenState extends State<DriverProfileEditScreen> with 
   File? _vehicleRegistrationFile;
   File? _vehicleImageFile;
   
-  // Document upload states
-  bool _driverLicenseUploading = false;
-  bool _nationalIdUploading = false;
-  bool _vehicleRegistrationUploading = false;
-  bool _vehicleImageUploading = false;
+  // Individual document upload progress is rolled into _isLoading for now.
 
   @override
   void initState() {
@@ -139,47 +136,23 @@ class _DriverProfileEditScreenState extends State<DriverProfileEditScreen> with 
       }
       
       if (_driverLicenseFile != null) {
-        setState(() {
-          _driverLicenseUploading = true;
-        });
         final url = await _userRepository.uploadDocument(currentUser.uid, _driverLicenseFile!, 'driver_license');
         documentUpdates['driverLicense'] = url;
-        setState(() {
-          _driverLicenseUploading = false;
-        });
       }
-      
+
       if (_nationalIdFile != null) {
-        setState(() {
-          _nationalIdUploading = true;
-        });
         final url = await _userRepository.uploadDocument(currentUser.uid, _nationalIdFile!, 'national_id');
         documentUpdates['nationalId'] = url;
-        setState(() {
-          _nationalIdUploading = false;
-        });
       }
-      
+
       if (_vehicleRegistrationFile != null) {
-        setState(() {
-          _vehicleRegistrationUploading = true;
-        });
         final url = await _userRepository.uploadDocument(currentUser.uid, _vehicleRegistrationFile!, 'vehicle_registration');
         documentUpdates['vehicleRegistration'] = url;
-        setState(() {
-          _vehicleRegistrationUploading = false;
-        });
       }
-      
+
       if (_vehicleImageFile != null) {
-        setState(() {
-          _vehicleImageUploading = true;
-        });
         final url = await _userRepository.uploadDocument(currentUser.uid, _vehicleImageFile!, 'vehicle_image');
         documentUpdates['vehicleImageUrl'] = url;
-        setState(() {
-          _vehicleImageUploading = false;
-        });
       }
 
       // Update basic profile information
@@ -216,21 +189,14 @@ class _DriverProfileEditScreenState extends State<DriverProfileEditScreen> with 
       await authProvider.refreshUserData();
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Profile updated successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        AppSnackbar.showSuccess(context, 'Your driver profile has been updated.');
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error updating profile: $e'),
-            backgroundColor: Colors.red,
-          ),
+        AppSnackbar.showError(
+          context,
+          'Could not update your profile. Please check your connection and try again.',
         );
       }
     } finally {
@@ -238,128 +204,6 @@ class _DriverProfileEditScreenState extends State<DriverProfileEditScreen> with 
         _isLoading = false;
       });
     }
-  }
-
-  Widget _buildDocumentUploadCard({
-    required String title,
-    required String description,
-    required VoidCallback onTap,
-    required bool isUploading,
-    String? currentUrl,
-    File? selectedFile,
-  }) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  selectedFile != null || currentUrl != null 
-                    ? Icons.check_circle 
-                    : Icons.upload_file,
-                  color: selectedFile != null || currentUrl != null 
-                    ? Colors.green 
-                    : Colors.grey,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      Text(
-                        description,
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            if (selectedFile != null) ...[
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.green[50],
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.file_present, color: Colors.green, size: 16),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        selectedFile.path.split('/').last,
-                        style: const TextStyle(fontSize: 12),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ] else if (currentUrl != null) ...[
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.blue[50],
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.cloud_done, color: Colors.blue, size: 16),
-                    SizedBox(width: 8),
-                    Text(
-                      'Document uploaded',
-                      style: TextStyle(fontSize: 12, color: Colors.blue),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: isUploading ? null : onTap,
-                icon: isUploading 
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.upload, size: 18),
-                label: Text(
-                  isUploading 
-                    ? 'Uploading...' 
-                    : selectedFile != null || currentUrl != null 
-                      ? 'Replace Document' 
-                      : 'Upload Document',
-                  style: const TextStyle(fontSize: 14),
-                ),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   @override

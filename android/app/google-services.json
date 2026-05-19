@@ -12,7 +12,20 @@
           "package_name": "com.example.cargo_app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "997204013284-9okfed57h9b06hp4liroagmhmnjivca0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.cargo_app",
+            "certificate_hash": "0c5b6919e4760110566c05ff065140436ba5149d"
+          }
+        },
+        {
+          "client_id": "997204013284-ok872lov9uc9pvevg0517jvknfvhs9oh.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDw6bQzYP0JLVOScYNbu19duAIuLRL8A4U"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "997204013284-ok872lov9uc9pvevg0517jvknfvhs9oh.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "997204013284-ag3a1vmjs26gnt7a6cdo2regqpjkg4iq.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.CargoApp"
+              }
+            }
+          ]
         }
       }
     }

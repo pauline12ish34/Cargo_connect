@@ -1,22 +1,43 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'push_notification_service.dart';
 
 class DeviceTokenService {
-  /// Call this after login/signup and on app start
+  /// Call this after login/signup and on app start.
   static Future<void> saveDeviceToken([String? token, String? userId]) async {
     final user = FirebaseAuth.instance.currentUser;
     final resolvedUserId = userId ?? user?.uid;
     final resolvedToken = token ?? await PushNotificationService.getToken();
     if (resolvedUserId != null && resolvedToken != null) {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(resolvedUserId)
-          .update({'deviceToken': resolvedToken});
+      try {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(resolvedUserId)
+            .update({'deviceToken': resolvedToken});
+      } catch (e) {
+        debugPrint('DeviceTokenService: failed to save token: $e');
+      }
     }
   }
 
-  /// Listen for token refresh and update Firestore
+  /// Remove the device token from Firestore on logout so this device no
+  /// longer receives push notifications for the signed-out user.
+  static Future<void> removeDeviceToken([String? userId]) async {
+    final resolvedUserId =
+        userId ?? FirebaseAuth.instance.currentUser?.uid;
+    if (resolvedUserId == null) return;
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(resolvedUserId)
+          .update({'deviceToken': FieldValue.delete()});
+    } catch (e) {
+      debugPrint('DeviceTokenService: failed to remove token: $e');
+    }
+  }
+
+  /// Listen for token refresh and update Firestore.
   static void listenForTokenRefresh() {
     PushNotificationService.onTokenRefresh.listen((newToken) async {
       final user = FirebaseAuth.instance.currentUser;
@@ -25,6 +46,4 @@ class DeviceTokenService {
       }
     });
   }
-
-  // (Removed duplicate saveDeviceToken)
 }

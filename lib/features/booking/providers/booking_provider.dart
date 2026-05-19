@@ -35,8 +35,8 @@ class BookingProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // Create a new booking
-  Future<bool> createBooking({
+  // Create a new booking — returns the booking ID on success, null on failure.
+  Future<String?> createBooking({
     required String cargoOwnerId,
     required String pickupLocation,
     required String dropoffLocation,
@@ -65,12 +65,40 @@ class BookingProvider with ChangeNotifier {
       );
 
       final bookingId = await _bookingRepository.createBooking(booking);
-
       _myBookings.insert(0, booking.copyWith(id: bookingId));
-
-      return true;
+      return bookingId;
     } catch (e) {
       _setError('Failed to create booking: $e');
+      return null;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Assign a specific driver to a booking (cargo-owner-initiated).
+  Future<bool> assignDriverToBooking(String bookingId, String driverId) async {
+    try {
+      _setLoading(true);
+      _setError(null);
+      await _bookingRepository.acceptBooking(bookingId, driverId);
+
+      final index = _myBookings.indexWhere((b) => b.id == bookingId);
+      if (index != -1) {
+        _myBookings[index] = _myBookings[index].copyWith(
+          status: BookingStatus.accepted,
+          driverId: driverId,
+          acceptedAt: DateTime.now(),
+        );
+        notifyListeners();
+        await JobNotificationService.notifyJobStatus(
+          recipientId: driverId,
+          status: 'assigned',
+          bookingId: bookingId,
+        );
+      }
+      return true;
+    } catch (e) {
+      _setError('Failed to assign driver: $e');
       return false;
     } finally {
       _setLoading(false);
@@ -220,12 +248,14 @@ class BookingProvider with ChangeNotifier {
           status: 'completed',
           bookingId: bookingId,
         );
-        // Notify driver of job completion (optional)
-        await JobNotificationService.notifyJobStatus(
-          recipientId: updated.driverId!,
-          status: 'completed',
-          bookingId: bookingId,
-        );
+        // Notify driver of job completion
+        if (updated.driverId != null) {
+          await JobNotificationService.notifyJobStatus(
+            recipientId: updated.driverId!,
+            status: 'completed',
+            bookingId: bookingId,
+          );
+        }
       }
 
       return true;
@@ -251,18 +281,20 @@ class BookingProvider with ChangeNotifier {
         );
         _myBookings[index] = updated;
 
-        // Send job status notification to cargo owner
+        // Notify cargo owner of cancellation
         await JobNotificationService.notifyJobStatus(
           recipientId: updated.cargoOwnerId,
           status: 'cancelled',
           bookingId: bookingId,
         );
-        // Notify driver of job cancellation
-        await JobNotificationService.notifyJobStatus(
-          recipientId: updated.driverId!,
-          status: 'cancelled',
-          bookingId: bookingId,
-        );
+        // Notify driver only if one was assigned
+        if (updated.driverId != null) {
+          await JobNotificationService.notifyJobStatus(
+            recipientId: updated.driverId!,
+            status: 'cancelled',
+            bookingId: bookingId,
+          );
+        }
       }
 
       return true;

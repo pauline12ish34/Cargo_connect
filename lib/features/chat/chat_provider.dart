@@ -63,14 +63,17 @@ class ChatProvider with ChangeNotifier {
       _messages.add(message.copyWith(id: messageId));
       notifyListeners();
 
-      // Send push notification to recipient
-      await CloudFunctionService.sendNotificationToUser(
-        recipientId,
-        {
-          'type': 'chat',
-          'message': 'New message from $senderName',
-        },
-      );
+      // Send push notification to recipient — fire-and-forget so a FCM failure
+      // never prevents the message from being delivered via Firestore.
+      if (recipientId.isNotEmpty) {
+        CloudFunctionService.sendNotificationToUser(
+          recipientId,
+          {
+            'type': 'chat',
+            'message': 'New message from $senderName',
+          },
+        );
+      }
 
       return true;
     } catch (e) {

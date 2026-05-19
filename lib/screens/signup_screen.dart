@@ -1,10 +1,12 @@
 import '../widgets/app_states.dart';
 import 'package:cargo_app/screens/driver_details.dart';
+
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../providers/auth_provider.dart';
 import '../core/enums/app_enums.dart';
+import '../constants.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -14,282 +16,310 @@ class SignupScreen extends StatefulWidget {
 }
 
 class _SignupScreenState extends State<SignupScreen> {
-  final nameController = TextEditingController();
-  final emailController = TextEditingController();
-  final phoneController = TextEditingController();
-  final passwordController = TextEditingController();
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true;
   UserRole _selectedRole = UserRole.cargoOwner;
 
   @override
   void dispose() {
-    nameController.dispose();
-    emailController.dispose();
-    phoneController.dispose();
-    passwordController.dispose();
+    _nameController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
-  // In your existing SignupScreen, modify the _handleSignup method:
   Future<void> _handleSignup() async {
     if (!_formKey.currentState!.validate()) return;
 
     if (_selectedRole == UserRole.driver) {
-      // Navigate to multi-step driver registration
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => DriverSignupScreen(
-            initialName: nameController.text.trim(),
-            initialEmail: emailController.text.trim(),
-            initialPhone: phoneController.text.trim(),
-            initialPassword: passwordController.text,
+            initialName: _nameController.text.trim(),
+            initialEmail: _emailController.text.trim(),
+            initialPhone: _phoneController.text.trim(),
+            initialPassword: _passwordController.text,
           ),
         ),
       );
       return;
     }
 
-    // Existing cargo owner registration
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final success = await authProvider.signUp(
-      email: emailController.text.trim(),
-      password: passwordController.text,
-      name: nameController.text.trim(),
-      phoneNumber: phoneController.text.trim(),
+      email: _emailController.text.trim(),
+      password: _passwordController.text,
+      name: _nameController.text.trim(),
+      phoneNumber: _phoneController.text.trim(),
       role: _selectedRole,
     );
 
     if (success && mounted) {
-      Navigator.pushReplacementNamed(context, '/email-verification');
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(authProvider.error ?? 'Signup failed'),
-          backgroundColor: Colors.red,
-        ),
+      AppSnackbar.showSuccess(
+        context,
+        'Account created! Please verify your email to continue.',
       );
+      Navigator.pushReplacementNamed(context, '/email-verification');
+    } else if (mounted && authProvider.error != null) {
+      AppSnackbar.showError(context, authProvider.error!);
+    }
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    final success = await authProvider.signInWithGoogle(role: _selectedRole);
+
+    if (success && mounted) {
+      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+    } else if (mounted && authProvider.error != null) {
+      AppSnackbar.showError(context, authProvider.error!);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios_new, color: cs.onSurface, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
       body: Consumer<AuthProvider>(
         builder: (context, authProvider, child) {
           if (authProvider.isLoading) {
-            return const AppLoading(message: 'Signing up...');
+            return const AppLoading(message: 'Creating account…');
           }
-          if (authProvider.error != null && authProvider.error!.isNotEmpty) {
-            return AppError(message: authProvider.error!);
-          }
-          return Padding(
-            padding: const EdgeInsets.all(24),
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Form(
               key: _formKey,
-              child: ListView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 80),
-                  const Text(
-                    "Register to CargoLink",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    "Fill the form to continue",
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                  const SizedBox(height: 30),
+                  // ── Header ──────────────────────────────────────────────
+                  Text('Create Account', style: welcomeTitleStyle.copyWith(color: cs.onSurface))
+                      .animate()
+                      .fade(duration: 400.ms)
+                      .slideX(begin: -0.1),
 
-                  // Role Selection
-                  const Text(
-                    "I am a:",
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
                   const SizedBox(height: 8),
+
+                  Text(
+                    'Join the network of cargo professionals',
+                    style: welcomeSubtitleStyle.copyWith(color: cs.onSurfaceVariant),
+                  ).animate().fade(delay: 100.ms, duration: 400.ms),
+
+                  const SizedBox(height: 28),
+
+                  // ── Role selector ─────────────────────────────────────────
+                  Text(
+                    'I am a:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurface,
+                      fontSize: 14,
+                    ),
+                  ).animate().fade(delay: 150.ms),
+
+                  const SizedBox(height: 12),
+
                   Row(
                     children: [
-                      Expanded(
-                        child: RadioListTile<UserRole>(
-                          title: const Text("Cargo Owner"),
-                          value: UserRole.cargoOwner,
-                          groupValue: _selectedRole,
-                          onChanged: (UserRole? value) {
-                            setState(() {
-                              _selectedRole = value!;
-                            });
-                          },
-                        ),
+                      _RoleCard(
+                        role: UserRole.cargoOwner,
+                        title: 'Cargo Owner',
+                        icon: Icons.inventory_2_outlined,
+                        selected: _selectedRole,
+                        onTap: () =>
+                            setState(() => _selectedRole = UserRole.cargoOwner),
                       ),
-                      Expanded(
-                        child: RadioListTile<UserRole>(
-                          title: const Text("Driver"),
-                          value: UserRole.driver,
-                          groupValue: _selectedRole,
-                          onChanged: (UserRole? value) {
-                            setState(() {
-                              _selectedRole = value!;
-                            });
-                          },
-                        ),
+                      const SizedBox(width: 14),
+                      _RoleCard(
+                        role: UserRole.driver,
+                        title: 'Driver',
+                        icon: Icons.local_shipping_outlined,
+                        selected: _selectedRole,
+                        onTap: () =>
+                            setState(() => _selectedRole = UserRole.driver),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 16),
+                  ).animate().fade(delay: 200.ms).slideY(begin: 0.08),
+
+                  const SizedBox(height: 24),
+
+                  // ── Fields ────────────────────────────────────────────────
+                  TextFormField(
+                    controller: _nameController,
+                    textInputAction: TextInputAction.next,
+                    autofillHints: const [AutofillHints.name],
+                    validator: (v) =>
+                        (v == null || v.isEmpty) ? 'Name is required' : null,
+                    decoration: _inputDecoration('Full Name', Icons.person_outline),
+                  ).animate().fade(delay: 280.ms).slideY(begin: 0.08),
+
+                  const SizedBox(height: 14),
 
                   TextFormField(
-                    controller: nameController,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your name';
-                      }
-                      return null;
-                    },
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: const Color(0xFFF1F5F9),
-                      hintText: "Full Name",
-                      prefixIcon: const Icon(Icons.person_outline),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: emailController,
+                    controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your email';
-                      }
-                      if (!RegExp(
-                        r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                      ).hasMatch(value)) {
-                        return 'Please enter a valid email';
-                      }
+                    textInputAction: TextInputAction.next,
+                    autofillHints: const [AutofillHints.email],
+                    validator: (v) {
+                      if (v == null || v.isEmpty) return 'Email is required';
+                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                          .hasMatch(v)) return 'Enter a valid email address';
                       return null;
                     },
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: const Color(0xFFF1F5F9),
-                      hintText: "Email",
-                      prefixIcon: const Icon(Icons.email_outlined),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+                    decoration: _inputDecoration('Email', Icons.email_outlined),
+                  ).animate().fade(delay: 360.ms).slideY(begin: 0.08),
+
+                  const SizedBox(height: 14),
+
                   TextFormField(
-                    controller: phoneController,
+                    controller: _phoneController,
                     keyboardType: TextInputType.phone,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your phone number';
-                      }
-                      if (!RegExp(
-                        r'^\+?[0-9]{10,}$',
-                      ).hasMatch(value.replaceAll(' ', ''))) {
-                        return 'Please enter a valid phone number';
-                      }
-                      return null;
-                    },
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: const Color(0xFFF1F5F9),
-                      hintText: "Phone number (+250...)",
-                      prefixIcon: const Icon(Icons.phone_android),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+                    textInputAction: TextInputAction.next,
+                    autofillHints: const [AutofillHints.telephoneNumber],
+                    validator: (v) => (v == null || v.isEmpty)
+                        ? 'Phone number is required'
+                        : null,
+                    decoration:
+                        _inputDecoration('Phone Number', Icons.phone_android_outlined),
+                  ).animate().fade(delay: 440.ms).slideY(begin: 0.08),
+
+                  const SizedBox(height: 14),
+
                   TextFormField(
-                    controller: passwordController,
+                    controller: _passwordController,
                     obscureText: _obscurePassword,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter a password';
-                      }
-                      if (value.length < 6) {
-                        return 'Password must be at least 6 characters';
-                      }
-                      return null;
-                    },
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: const Color(0xFFF1F5F9),
-                      hintText: "Password",
-                      prefixIcon: const Icon(Icons.lock_outline),
+                    textInputAction: TextInputAction.done,
+                    autofillHints: const [AutofillHints.newPassword],
+                    onFieldSubmitted: (_) => _handleSignup(),
+                    validator: (v) => (v == null || v.length < 6)
+                        ? 'Minimum 6 characters required'
+                        : null,
+                    decoration:
+                        _inputDecoration('Password', Icons.lock_outline).copyWith(
                       suffixIcon: IconButton(
                         icon: Icon(
                           _obscurePassword
                               ? Icons.visibility_outlined
                               : Icons.visibility_off_outlined,
+                          size: 20,
+                          color: cs.onSurfaceVariant,
                         ),
-                        onPressed: () {
-                          setState(() {
-                            _obscurePassword = !_obscurePassword;
-                          });
-                        },
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide.none,
+                        onPressed: () => setState(
+                            () => _obscurePassword = !_obscurePassword),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 20),
+                  ).animate().fade(delay: 520.ms).slideY(begin: 0.08),
+
+                  const SizedBox(height: 28),
+
+                  // ── Sign Up Button ────────────────────────────────────────
                   ElevatedButton(
                     onPressed: authProvider.isLoading ? null : _handleSignup,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF08914D),
-                      minimumSize: const Size(double.infinity, 50),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+                    child: Text(
+                      _selectedRole == UserRole.driver
+                          ? 'CONTINUE TO DRIVER DETAILS'
+                          : 'CREATE ACCOUNT',
                     ),
-                    child: authProvider.isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text(
-                            "SIGNUP",
-                            style: TextStyle(color: Colors.white),
-                          ),
-                  ),
-                  const SizedBox(height: 20),
-                  const Center(child: Text("Or continue with")),
-                  const SizedBox(height: 10),
+                  )
+                      .animate()
+                      .fade(delay: 600.ms)
+                      .scale(begin: const Offset(0.97, 0.97)),
+
+                  const SizedBox(height: 24),
+
+                  // ── Divider ────────────────────────────────────────────────
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      FaIcon(FontAwesomeIcons.google, size: 24),
-                      SizedBox(width: 20),
-                      FaIcon(FontAwesomeIcons.facebook, size: 24),
-                      SizedBox(width: 20),
-                      FaIcon(FontAwesomeIcons.instagram, size: 24),
+                    children: [
+                      const Expanded(child: Divider()),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          'Or continue with',
+                          style: TextStyle(
+                            color: cs.onSurfaceVariant.withOpacity(0.8),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      const Expanded(child: Divider()),
                     ],
-                  ),
+                  ).animate().fade(delay: 700.ms),
+
                   const SizedBox(height: 20),
+
+                  // ── Google Sign-In Button ──────────────────────────────────
+                  _GoogleSignInButton(
+                    isLoading: authProvider.isGoogleLoading,
+                    onPressed:
+                        authProvider.isLoading || authProvider.isGoogleLoading
+                            ? null
+                            : _handleGoogleSignIn,
+                  ).animate().fade(delay: 800.ms).slideY(begin: 0.08),
+
+                  // ── Google role hint ─────────────────────────────────────
+                  if (!authProvider.isGoogleLoading)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.info_outline, size: 13, color: textLight),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Will sign in as ${_selectedRole == UserRole.driver ? "Driver" : "Cargo Owner"}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: textLight,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ).animate().fade(delay: 850.ms),
+
+                  const SizedBox(height: 28),
+
+                  // ── Login link ────────────────────────────────────────────
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text("You already have an account?"),
+                      Text(
+                        'Already have an account?',
+                        style: TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
+                      ),
                       TextButton(
-                        onPressed: () => Navigator.pushNamed(context, '/login'),
+                        onPressed: () =>
+                            Navigator.pushNamed(context, '/login'),
                         child: const Text(
-                          "LOGIN",
-                          style: TextStyle(fontWeight: FontWeight.w600),
+                          'Sign In',
+                          style: TextStyle(
+                            color: appGreen,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
                         ),
                       ),
                     ],
-                  ),
+                  ).animate().fade(delay: 900.ms),
+
+                  const SizedBox(height: 32),
                 ],
               ),
             ),
@@ -298,4 +328,209 @@ class _SignupScreenState extends State<SignupScreen> {
       ),
     );
   }
+
+  InputDecoration _inputDecoration(String hint, IconData icon) {
+    return InputDecoration(
+      hintText: hint,
+      prefixIcon: Icon(icon, size: 20, color: Theme.of(context).colorScheme.onSurfaceVariant),
+    );
+  }
+}
+
+// ─── Role Card ────────────────────────────────────────────────────────────────
+
+class _RoleCard extends StatelessWidget {
+  final UserRole role;
+  final UserRole selected;
+  final String title;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _RoleCard({
+    required this.role,
+    required this.selected,
+    required this.title,
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isSelected = selected == role;
+    final cs = Theme.of(context).colorScheme;
+    return Expanded(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeInOut,
+        decoration: BoxDecoration(
+          color: isSelected ? appGreen.withOpacity(0.08) : cs.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected ? appGreen : borderGray.withOpacity(0.5),
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 18),
+            child: Column(
+              children: [
+                Icon(
+                  icon,
+                  color: isSelected ? appGreen : textGray,
+                  size: 28,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: isSelected ? appGreen : textGray,
+                    fontWeight:
+                        isSelected ? FontWeight.bold : FontWeight.w500,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Google Sign-In Button (shared widget) ─────────────────────────────────────
+
+class _GoogleSignInButton extends StatelessWidget {
+  final VoidCallback? onPressed;
+  final bool isLoading;
+
+  const _GoogleSignInButton({this.onPressed, this.isLoading = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          backgroundColor: cs.surface,
+          foregroundColor: cs.onSurface,
+          side: BorderSide(
+            color: isLoading ? cs.outlineVariant : cs.outlineVariant.withOpacity(0.7),
+            width: 1.5,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(buttonBorderRadius),
+          ),
+          padding: EdgeInsets.zero,
+          elevation: 0,
+        ),
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          child: isLoading
+              ? const SizedBox(
+                  key: ValueKey('loading'),
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Color(0xFF4285F4),
+                    ),
+                  ),
+                )
+              : Row(
+                  key: const ValueKey('idle'),
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _GoogleLogo(),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Continue with Google',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: cs.onSurface,
+                        letterSpacing: 0.1,
+                        fontFamily: 'Lexend',
+                      ),
+                    ),
+                  ],
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Four-colour Google "G" logo drawn with Flutter primitives.
+class _GoogleLogo extends StatelessWidget {
+  const _GoogleLogo();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 20,
+      height: 20,
+      child: CustomPaint(painter: _GoogleLogoPainter()),
+    );
+  }
+}
+
+class _GoogleLogoPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+    final r = size.width / 2;
+
+    canvas.clipPath(
+        Path()..addOval(Rect.fromCircle(center: Offset(cx, cy), radius: r)));
+    canvas.drawCircle(
+        Offset(cx, cy), r, Paint()..color = Colors.white);
+
+    const gap = 2.0 * (3.14159265358979 / 180.0);
+    const sweep = (3.14159265358979 / 2) - gap;
+
+    final colors = [
+      const Color(0xFF4285F4),
+      const Color(0xFFEA4335),
+      const Color(0xFFFBBC05),
+      const Color(0xFF34A853),
+    ];
+
+    final innerRect =
+        Rect.fromCircle(center: Offset(cx, cy), radius: r * 0.58);
+    double startAngle = -3.14159265358979 / 2 + gap / 2;
+
+    final arcPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = r * 0.38;
+
+    for (int i = 0; i < 4; i++) {
+      arcPaint.color = colors[i];
+      canvas.drawArc(innerRect, startAngle, sweep, false, arcPaint);
+      startAngle += sweep + gap;
+    }
+
+    final crossbarY = cy + r * 0.04;
+    canvas.drawRect(
+      Rect.fromLTRB(cx - r * 0.05, crossbarY - r * 0.13,
+          cx + r * 0.55, crossbarY + r * 0.13),
+      Paint()..color = Colors.white,
+    );
+    canvas.drawRect(
+      Rect.fromLTRB(cx + r * 0.02, crossbarY - r * 0.13,
+          cx + r * 0.55, crossbarY + r * 0.13),
+      Paint()..color = const Color(0xFF4285F4),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

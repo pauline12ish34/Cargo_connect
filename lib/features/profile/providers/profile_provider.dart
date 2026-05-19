@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../../../core/models/user_model.dart';
 import '../../../core/enums/app_enums.dart';
@@ -8,6 +9,7 @@ class ProfileProvider extends ChangeNotifier {
   UserModel? _currentUser;
   bool _isLoading = false;
   String? _error;
+  StreamSubscription<UserModel?>? _profileSubscription;
 
   ProfileProvider(this._userRepository);
 
@@ -104,21 +106,21 @@ class ProfileProvider extends ChangeNotifier {
 
   // Stream user profile changes
   void streamUserProfile(String uid) {
-    _userRepository
-        .userStream(uid)
-        .listen(
-          (user) {
-            if (user != null) {
-              _currentUser = user;
-              notifyListeners();
-            }
-          },
-          onError: (e) {
-            _error = 'Profile stream error: $e';
-            debugPrint('Error in user profile stream: $e');
-            notifyListeners();
-          },
-        );
+    // Cancel any previous subscription first
+    _profileSubscription?.cancel();
+    _profileSubscription = _userRepository.userStream(uid).listen(
+      (user) {
+        if (user != null) {
+          _currentUser = user;
+          notifyListeners();
+        }
+      },
+      onError: (e) {
+        _error = 'Profile stream error: $e';
+        debugPrint('Error in user profile stream: $e');
+        notifyListeners();
+      },
+    );
   }
 
   // Check if profile is complete
@@ -221,6 +223,12 @@ class ProfileProvider extends ChangeNotifier {
     _isLoading = false;
     _error = null;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _profileSubscription?.cancel();
+    super.dispose();
   }
 
   // Private helper methods

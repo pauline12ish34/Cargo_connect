@@ -55,16 +55,21 @@ class FirebaseChatRepository implements ChatRepository {
   @override
   Future<void> markMessagesAsRead(String bookingId, String userId) async {
     try {
+      // Avoid combining isNotEqualTo with isEqualTo on a different field —
+      // that pattern requires a composite index and Firestore rejects it at
+      // runtime without one. Instead, query by bookingId + isRead and filter
+      // the sender client-side (the result set is small per booking).
       final query = await _firestore
           .collection(_collectionName)
           .where('bookingId', isEqualTo: bookingId)
-          .where('senderId', isNotEqualTo: userId)
           .where('isRead', isEqualTo: false)
           .get();
 
       final batch = _firestore.batch();
       for (final doc in query.docs) {
-        batch.update(doc.reference, {'isRead': true});
+        if (doc.data()['senderId'] != userId) {
+          batch.update(doc.reference, {'isRead': true});
+        }
       }
       await batch.commit();
     } catch (e) {
@@ -75,14 +80,16 @@ class FirebaseChatRepository implements ChatRepository {
   @override
   Future<int> getUnreadMessageCount(String bookingId, String userId) async {
     try {
+      // Same fix: avoid multi-field inequality; filter sender client-side.
       final query = await _firestore
           .collection(_collectionName)
           .where('bookingId', isEqualTo: bookingId)
-          .where('senderId', isNotEqualTo: userId)
           .where('isRead', isEqualTo: false)
           .get();
 
-      return query.docs.length;
+      return query.docs
+          .where((doc) => doc.data()['senderId'] != userId)
+          .length;
     } catch (e) {
       throw Exception('Failed to get unread message count: $e');
     }

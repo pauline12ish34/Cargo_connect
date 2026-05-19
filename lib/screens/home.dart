@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
@@ -79,8 +80,20 @@ class _HomeState extends State<Home> {
           }
         }
 
-        // Fallback if user model is not loaded or role is unclear
-        return const AppEmpty(message: 'No profile found');
+        // If Firebase Auth still has a signed-in user the Firestore profile is
+        // either still loading (post-frame race) or simply doesn't exist yet.
+        // Either way, stay on a loading screen — _loadUserProfile will resolve it.
+        if (FirebaseAuth.instance.currentUser != null) {
+          return const Scaffold(body: AppLoading(message: 'Loading your profile...'));
+        }
+
+        // No Firebase Auth user at all — send back to Welcome.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            Navigator.pushReplacementNamed(context, '/');
+          }
+        });
+        return const Scaffold(body: AppLoading(message: 'Redirecting…'));
       },
     );
   }

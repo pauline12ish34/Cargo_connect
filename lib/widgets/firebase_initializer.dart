@@ -19,9 +19,9 @@ class FirebaseInitializer extends StatelessWidget {
       // Configure Firebase Auth settings
       await FirebaseAuthHelper.configureFirebaseAuth();
 
-      print('Firebase initialized successfully');
+      debugPrint('Firebase initialized successfully');
     } catch (e) {
-      print('Firebase initialization error: $e');
+      debugPrint('Firebase initialization error: $e');
       rethrow;
     }
   }

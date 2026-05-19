@@ -1,39 +1,60 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../core/models/user_model.dart';
 import '../core/enums/app_enums.dart';
 import '../services/auth_service.dart';
+import '../services/device_token_service.dart';
 
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
 
   UserModel? _user;
   bool _isLoading = false;
+  bool _isGoogleLoading = false; // Separate flag for Google sign-in button
   String? _error;
+  StreamSubscription<User?>? _authSubscription;
 
   UserModel? get user => _user;
   bool get isLoading => _isLoading;
+  bool get isGoogleLoading => _isGoogleLoading;
   String? get error => _error;
   bool get isAuthenticated => _user != null;
 
-  // Initialize auth state
+  /// The raw Firebase Auth user — useful for checking emailVerified without
+  /// going through the Firestore UserModel.
+  User? get currentFirebaseUser => _authService.currentUser;
+
+  // ── Auth state listener ───────────────────────────────────────────────────────
+
   Future<void> initializeAuth() async {
-    _authService.authStateChanges.listen((User? firebaseUser) async {
-      if (firebaseUser != null) {
-        try {
-          _user = await _authService.getCurrentUserData();
-        } catch (e) {
-          _error = e.toString();
+    // Cancel any previous subscription before creating a new one
+    await _authSubscription?.cancel();
+    _authSubscription = _authService.authStateChanges.listen(
+      (User? firebaseUser) async {
+        if (firebaseUser != null) {
+          try {
+            _user = await _authService.getCurrentUserData();
+          } catch (e) {
+            _error = _sanitizeError(e);
+          }
+        } else {
+          _user = null;
         }
-      } else {
-        _user = null;
-      }
-      notifyListeners();
-    });
+        notifyListeners();
+      },
+    );
   }
 
-  // Sign up
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
+  }
+
+  // ── Sign Up (email) ───────────────────────────────────────────────────────────
+
   Future<bool> signUp({
     required String email,
     required String password,
@@ -55,17 +76,15 @@ class AuthProvider with ChangeNotifier {
 
       return true;
     } catch (e) {
-      _setError('Registration error: ${e.toString()}');
+      _setError(_sanitizeError(e));
       return false;
     } finally {
       _setLoading(false);
     }
   }
 
+  // ── Sign Up (anonymous, for testing) ─────────────────────────────────────────
 
-
-
-  // Sign up anonymously for testing
   Future<bool> signUpAnonymously({
     required String name,
     required String phoneNumber,
@@ -101,52 +120,82 @@ class AuthProvider with ChangeNotifier {
 
       return true;
     } catch (e) {
-      _setError(e.toString());
+      _setError(_sanitizeError(e));
       return false;
     } finally {
       _setLoading(false);
     }
   }
 
-//dirver 
+  // ── Sign In (email) ───────────────────────────────────────────────────────────
 
-
-
-
-  // Sign in
   Future<bool> signIn({required String email, required String password}) async {
     try {
       _setLoading(true);
       _clearError();
 
       await _authService.signInWithEmail(email: email, password: password);
-
-      // Load user data after successful sign in
       _user = await _authService.getCurrentUserData();
+
+      // Firebase Auth succeeded but no Firestore profile exists.
+      // Sign out immediately so the app is in a clean state.
+      if (_user == null) {
+        await _authService.signOut();
+        throw 'No account found with this email. Please sign up first.';
+      }
 
       return true;
     } catch (e) {
-      _setError(e.toString());
+      _setError(_sanitizeError(e));
       return false;
     } finally {
       _setLoading(false);
     }
   }
 
-  // Sign out
+  // ── Sign In (Google) ──────────────────────────────────────────────────────────
+
+  /// Returns [true] on success, [false] on cancellation (no error shown),
+  /// and [false] + sets [error] on failure.
+  Future<bool> signInWithGoogle({UserRole? role}) async {
+    try {
+      _setGoogleLoading(true);
+      _clearError();
+
+      await _authService.signInWithGoogle(role: role);
+      _user = await _authService.getCurrentUserData();
+
+      return true;
+    } on GoogleSignInCancelledException {
+      // User tapped "back" — not an error, just return false silently
+      return false;
+    } catch (e) {
+      _setError(_sanitizeError(e));
+      return false;
+    } finally {
+      _setGoogleLoading(false);
+    }
+  }
+
+  // ── Sign Out ──────────────────────────────────────────────────────────────────
+
   Future<void> signOut() async {
     try {
       _setLoading(true);
+      // Remove device token before signing out so this device no longer
+      // receives push notifications for the current user.
+      await DeviceTokenService.removeDeviceToken(_user?.uid);
       await _authService.signOut();
       _user = null;
     } catch (e) {
-      _setError(e.toString());
+      _setError(_sanitizeError(e));
     } finally {
       _setLoading(false);
     }
   }
 
-  // Send password reset email
+  // ── Password reset ─────────────────────────────────────────────────────────────
+
   Future<bool> sendPasswordReset(String email) async {
     try {
       _setLoading(true);
@@ -155,14 +204,15 @@ class AuthProvider with ChangeNotifier {
       await _authService.sendPasswordResetEmail(email);
       return true;
     } catch (e) {
-      _setError(e.toString());
+      _setError(_sanitizeError(e));
       return false;
     } finally {
       _setLoading(false);
     }
   }
 
-  // Send email verification
+  // ── Email verification ─────────────────────────────────────────────────────────
+
   Future<bool> sendEmailVerification() async {
     try {
       _setLoading(true);
@@ -173,17 +223,15 @@ class AuthProvider with ChangeNotifier {
         await user.sendEmailVerification();
         return true;
       }
-
       return false;
     } catch (e) {
-      _setError(e.toString());
+      _setError(_sanitizeError(e));
       return false;
     } finally {
       _setLoading(false);
     }
   }
 
-  // Check if email is verified
   Future<void> checkEmailVerification() async {
     try {
       final user = _authService.currentUser;
@@ -193,21 +241,21 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      _setError(e.toString());
+      _setError(_sanitizeError(e));
     }
   }
 
-  // Refresh current user data
+  // ── Profile ────────────────────────────────────────────────────────────────────
+
   Future<void> refreshUserData() async {
     try {
       _user = await _authService.getCurrentUserData();
       notifyListeners();
     } catch (e) {
-      _setError(e.toString());
+      _setError(_sanitizeError(e));
     }
   }
 
-  // Update profile
   Future<bool> updateProfile({
     String? name,
     String? phoneNumber,
@@ -222,72 +270,65 @@ class AuthProvider with ChangeNotifier {
         phoneNumber: phoneNumber,
         profileImageUrl: profileImageUrl,
       );
-
-      // Refresh user data
       _user = await _authService.getCurrentUserData();
 
       return true;
     } catch (e) {
-      _setError(e.toString());
+      _setError(_sanitizeError(e));
       return false;
     } finally {
       _setLoading(false);
     }
   }
 
-  // Update driver documents
   Future<bool> updateDriverDocuments({
-  required String driverLicenseNumber,
-  required String nationalId,
-  required String vehicleRegistration,
-  required String vehicleType,
-  required String vehicleCapacity,
-  String? vehicleImageUrl,
-  String? plateNumber,
-  String? insurance,
-}) async {
-  try {
-    _setLoading(true);
-    _clearError();
+    required String driverLicenseNumber,
+    required String nationalId,
+    required String vehicleRegistration,
+    required String vehicleType,
+    required String vehicleCapacity,
+    String? vehicleImageUrl,
+    String? plateNumber,
+    String? insurance,
+  }) async {
+    try {
+      _setLoading(true);
+      _clearError();
 
-    if (_user == null || _user!.uid.isEmpty) {
-      _setError('No user logged in');
+      if (_user == null || _user!.uid.isEmpty) {
+        _setError('No user logged in');
+        return false;
+      }
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_user!.uid)
+          .update({
+        'driverLicenseNumber': driverLicenseNumber,
+        'nationalId': nationalId,
+        'vehicleRegistration': vehicleRegistration,
+        'vehicleType': vehicleType,
+        'vehicleCapacity': vehicleCapacity,
+        if (vehicleImageUrl != null) 'vehicleImageUrl': vehicleImageUrl,
+        if (plateNumber != null) 'plateNumber': plateNumber,
+        if (insurance != null) 'insurance': insurance,
+        'updatedAt': Timestamp.fromDate(DateTime.now()),
+      });
+
+      _user = await _authService.getCurrentUserData();
+      return true;
+    } catch (e) {
+      _setError(_sanitizeError(e));
       return false;
+    } finally {
+      _setLoading(false);
     }
-
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(_user!.uid)
-        .update({
-      'driverLicenseNumber': driverLicenseNumber,
-      'nationalId': nationalId,
-      'vehicleRegistration': vehicleRegistration,
-      'vehicleType': vehicleType,
-      'vehicleCapacity': vehicleCapacity,
-      if (vehicleImageUrl != null) 'vehicleImageUrl': vehicleImageUrl,
-      if (plateNumber != null) 'plateNumber': plateNumber,
-      if (insurance != null) 'insurance': insurance,
-      'updatedAt': Timestamp.fromDate(DateTime.now()),
-    });
-
-    // Refresh user data
-    _user = await _authService.getCurrentUserData();
-
-    return true;
-  } catch (e) {
-    _setError(e.toString());
-    return false;
-  } finally {
-    _setLoading(false);
   }
-}
 
-  // Update driver availability
   Future<bool> updateDriverAvailability(bool isAvailable) async {
     try {
       await _authService.updateDriverAvailability(isAvailable);
 
-      // Update local user data
       if (_user != null && _user!.role == UserRole.driver) {
         _user = _user!.copyWith(isAvailable: isAvailable);
         notifyListeners();
@@ -295,13 +336,20 @@ class AuthProvider with ChangeNotifier {
 
       return true;
     } catch (e) {
-      _setError(e.toString());
+      _setError(_sanitizeError(e));
       return false;
     }
   }
 
+  // ── Internal helpers ───────────────────────────────────────────────────────────
+
   void _setLoading(bool loading) {
     _isLoading = loading;
+    notifyListeners();
+  }
+
+  void _setGoogleLoading(bool loading) {
+    _isGoogleLoading = loading;
     notifyListeners();
   }
 
@@ -317,5 +365,17 @@ class AuthProvider with ChangeNotifier {
   void clearError() {
     _clearError();
     notifyListeners();
+  }
+
+  /// Strips the Dart "Exception: " or "FormatException: " prefix so
+  /// the raw user-friendly message from AuthService is displayed as-is.
+  static String _sanitizeError(Object e) {
+    final raw = e.toString();
+    // AuthService now throws plain Strings; this handles legacy Exception wraps
+    const prefixes = ['Exception: ', 'Error: ', 'FormatException: '];
+    for (final prefix in prefixes) {
+      if (raw.startsWith(prefix)) return raw.substring(prefix.length);
+    }
+    return raw;
   }
 }

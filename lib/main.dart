@@ -1,6 +1,7 @@
 import 'package:cargo_app/core/repositories/chat_repository.dart';
 import 'package:cargo_app/features/chat/chat_provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
@@ -26,9 +27,25 @@ import 'utils/app_theme.dart';
 import 'services/push_notification_service.dart';
 import 'services/device_token_service.dart';
 
+/// Must be a top-level function for FCM to call it in the background isolate.
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // Firebase is already initialised by the FCM plugin before this is called.
+  debugPrint('FCM background message received: ${message.messageId}');
+}
+
+/// Global keys so PushNotificationService can show UI without a BuildContext.
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
+    GlobalKey<ScaffoldMessengerState>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
+  // Register the background handler BEFORE Firebase.initializeApp so the
+  // FCM plugin sees it during cold-start background processing.
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
   // Initialize Firebase before the app starts to prevent runtime errors
   try {
     await Firebase.initializeApp(
@@ -39,6 +56,12 @@ void main() async {
   } catch (e) {
     debugPrint('Firebase initialization error: $e');
   }
+
+  // Initialize push notifications (channel setup, permission request, listeners)
+  await PushNotificationService.initialize(
+    navigatorKey: navigatorKey,
+    scaffoldMessengerKey: scaffoldMessengerKey,
+  );
 
   runApp(const MyApp());
 }
@@ -106,12 +129,6 @@ class _CargoLinkAppState extends State<CargoLinkApp> {
   @override
   void initState() {
     super.initState();
-    // Initialize global services once
-    _initServices();
-  }
-
-  void _initServices() {
-    // These services usually run in the background and don't need UI context
     DeviceTokenService.saveDeviceToken();
     DeviceTokenService.listenForTokenRefresh();
   }
@@ -126,12 +143,9 @@ class _CargoLinkAppState extends State<CargoLinkApp> {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+      navigatorKey: navigatorKey,
+      scaffoldMessengerKey: scaffoldMessengerKey,
       initialRoute: '/splash',
-      // We use the builder to initialize PushNotificationService with a context
-      // that is a child of MaterialApp (so it can find ScaffoldMessenger)
-      builder: (context, child) {
-        return _NotificationWrapper(child: child!);
-      },
       routes: {
         '/splash': (context) => const SplashScreen(),
         '/': (context) => WelcomeScreen(),
@@ -140,38 +154,10 @@ class _CargoLinkAppState extends State<CargoLinkApp> {
         '/forgot-password': (context) => const ForgetPasswordScreen(),
         '/password-reset-confirmation': (context) =>
             const PasswordResetConfirmation(),
-        '/email-verification': (context) =>
-            const EmailVerificationScreen(),
+        '/email-verification': (context) => const EmailVerificationScreen(),
         '/home': (context) => const Home(),
         '/personal-data': (context) => const PersonalDataScreen(),
       },
     );
   }
-}
-
-/// A wrapper widget to handle PushNotificationService initialization
-/// with access to the MaterialApp's context.
-class _NotificationWrapper extends StatefulWidget {
-  final Widget child;
-  const _NotificationWrapper({required this.child});
-
-  @override
-  State<_NotificationWrapper> createState() => _NotificationWrapperState();
-}
-
-class _NotificationWrapperState extends State<_NotificationWrapper> {
-  bool _pushInitialized = false;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Initialize push notifications only once when the context is ready
-    if (!_pushInitialized) {
-      PushNotificationService.initialize(context);
-      _pushInitialized = true;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) => widget.child;
 }

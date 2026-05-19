@@ -1,0 +1,38 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ── User profile images ──────────────────────────────────────────────────
+    match /users/{userId}/profile/{fileName} {
+      // Anyone authenticated may read profile images (shown in driver cards, etc.)
+      allow read: if request.auth != null;
+      // Only the owner may write their own profile image.
+      allow write: if request.auth != null && request.auth.uid == userId
+        // Limit to 5 MB, image types only.
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    // ── Vehicle images ───────────────────────────────────────────────────────
+    match /users/{userId}/vehicle/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    // ── Driver documents (license, national ID, etc.) ────────────────────────
+    match /users/{userId}/documents/{fileName} {
+      // Only the owner can read/write their own documents.
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId
+        && request.resource.size < 10 * 1024 * 1024;
+    }
+
+    // ── Deny everything else ─────────────────────────────────────────────────
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

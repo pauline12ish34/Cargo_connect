@@ -1,0 +1,111 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper functions ────────────────────────────────────────────────────────
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return request.auth.uid == uid;
+    }
+
+    function isDriver() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'driver';
+    }
+
+    function isCargoOwner() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'cargo_owner';
+    }
+
+    // ── Users ───────────────────────────────────────────────────────────────────
+
+    match /users/{userId} {
+      // Any authenticated user can read any user profile (needed for displaying
+      // driver profiles to cargo owners and vice-versa).
+      allow read: if isAuthenticated();
+
+      // Only the owner of the document may create or update their profile.
+      allow create: if isAuthenticated() && isOwner(userId);
+      allow update: if isAuthenticated() && isOwner(userId);
+
+      // Deletion is not permitted from the client.
+      allow delete: if false;
+    }
+
+    // ── Bookings ────────────────────────────────────────────────────────────────
+
+    match /bookings/{bookingId} {
+      // Cargo owners and drivers involved in the booking can read it.
+      allow read: if isAuthenticated() && (
+        resource.data.cargoOwnerId == request.auth.uid ||
+        resource.data.driverId == request.auth.uid
+      );
+
+      // Only cargo owners may create bookings.
+      allow create: if isAuthenticated() && isCargoOwner()
+        && request.resource.data.cargoOwnerId == request.auth.uid;
+
+      // Both parties may update a booking (accept, decline, complete, cancel).
+      allow update: if isAuthenticated() && (
+        resource.data.cargoOwnerId == request.auth.uid ||
+        resource.data.driverId == request.auth.uid
+      );
+
+      // Deletion is not permitted from the client.
+      allow delete: if false;
+    }
+
+    // ── Chat messages ───────────────────────────────────────────────────────────
+
+    match /chat_messages/{messageId} {
+      // Users may read/write messages only for bookings they are part of.
+      allow read: if isAuthenticated() && (
+        resource.data.senderId == request.auth.uid ||
+        // Allow read if the user is a participant of the associated booking.
+        exists(/databases/$(database)/documents/bookings/$(resource.data.bookingId)) &&
+        (
+          get(/databases/$(database)/documents/bookings/$(resource.data.bookingId)).data.cargoOwnerId == request.auth.uid ||
+          get(/databases/$(database)/documents/bookings/$(resource.data.bookingId)).data.driverId == request.auth.uid
+        )
+      );
+
+      allow create: if isAuthenticated()
+        && request.resource.data.senderId == request.auth.uid;
+
+      // Only mark-as-read updates allowed after creation.
+      allow update: if isAuthenticated()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
+
+      allow delete: if false;
+    }
+
+    // ── Notifications ───────────────────────────────────────────────────────────
+
+    match /notifications/{userId}/items/{itemId} {
+      // Any authenticated user can create a notification for another user
+      // (e.g. cargo owner notifies driver of assignment and vice versa).
+      allow create: if isAuthenticated();
+
+      // Only the recipient can read their own notifications.
+      allow read: if isAuthenticated() && isOwner(userId);
+
+      // Only the recipient can mark notifications as read.
+      allow update: if isAuthenticated() && isOwner(userId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
+
+      allow delete: if false;
+    }
+
+    // ── Device tokens (managed by DeviceTokenService via user document) ─────────
+    // Covered by the /users/{userId} rule above.
+
+    // ── Deny everything else ────────────────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
