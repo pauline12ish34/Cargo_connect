@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, Header
 from pydantic import BaseModel
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
+from typing import Optional
 import requests
 import json
 import base64
@@ -17,6 +18,7 @@ class NotificationRequest(BaseModel):
     token: str
     title: str
     body: str
+    data: Optional[dict] = None
 
 
 def get_credentials():
@@ -74,6 +76,7 @@ def send_notification(req: NotificationRequest, x_api_key: str = Header(None)):
                 "title": req.title,
                 "body": req.body,
             },
+            "data": {k: str(v) for k, v in (req.data or {}).items()},
             "android": {
                 "priority": "high",
                 "notification": {
