@@ -78,7 +78,6 @@ def send_notification(req: NotificationRequest, x_api_key: str = Header(None)):
                 "priority": "high",
                 "notification": {
                     "channel_id": "cargolink_high",
-                    "priority": "high",
                     "default_sound": True,
                     "default_vibrate_timings": True,
                 },
