@@ -43,3 +43,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Firebase service account — NEVER commit this
+backend/service-account.json
+**/service-account.json

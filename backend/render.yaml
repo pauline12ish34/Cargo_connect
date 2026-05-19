@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: cargolink-notifications
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: FIREBASE_PROJECT_ID
+        value: cargo-app-9c5d5
+      - key: API_KEY
+        sync: false          # set manually in Render dashboard (secret)
+      - key: SERVICE_ACCOUNT_JSON
+        sync: false          # set manually in Render dashboard (secret)
