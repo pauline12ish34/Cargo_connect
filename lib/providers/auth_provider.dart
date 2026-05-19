@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../core/models/user_model.dart';
 import '../core/enums/app_enums.dart';
 import '../services/auth_service.dart';
+import '../services/device_token_service.dart';
 
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
@@ -11,20 +12,26 @@ class AuthProvider with ChangeNotifier {
   UserModel? _user;
   bool _isLoading = false;
   String? _error;
+  bool _authListenerRegistered = false;
 
   UserModel? get user => _user;
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get isAuthenticated => _user != null;
 
-  // Initialize auth state
+  // Initialize auth state — safe to call multiple times; listener registered only once.
   Future<void> initializeAuth() async {
+    if (_authListenerRegistered) return;
+    _authListenerRegistered = true;
     _authService.authStateChanges.listen((User? firebaseUser) async {
+      _error = null; // clear stale errors on every auth state transition
       if (firebaseUser != null) {
         try {
           _user = await _authService.getCurrentUserData();
-        } catch (e) {
-          _error = e.toString();
+        } catch (_) {
+          // Silently ignore background Firestore errors (e.g. permission-denied
+          // during token rotation). The user can still attempt to log in.
+          _user = null;
         }
       } else {
         _user = null;
@@ -52,6 +59,9 @@ class AuthProvider with ChangeNotifier {
         phoneNumber: phoneNumber,
         role: role,
       );
+
+      // Save FCM token immediately so the new user can receive notifications
+      DeviceTokenService.saveDeviceToken();
 
       return true;
     } catch (e) {
@@ -124,6 +134,9 @@ class AuthProvider with ChangeNotifier {
       // Load user data after successful sign in
       _user = await _authService.getCurrentUserData();
 
+      // Save FCM token now that a real user is authenticated
+      DeviceTokenService.saveDeviceToken();
+
       return true;
     } catch (e) {
       _setError(e.toString());
@@ -137,6 +150,11 @@ class AuthProvider with ChangeNotifier {
   Future<void> signOut() async {
     try {
       _setLoading(true);
+      // Clear FCM token before signing out so this device stops receiving
+      // notifications for the outgoing user
+      if (_user != null) {
+        await DeviceTokenService.clearDeviceToken(_user!.uid);
+      }
       await _authService.signOut();
       _user = null;
     } catch (e) {

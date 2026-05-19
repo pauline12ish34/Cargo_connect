@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:provider/provider.dart';
 import '../firebase_options.dart';
 import '../utils/firebase_auth_helper.dart';
-import '../providers/auth_provider.dart';
 
 class FirebaseInitializer extends StatelessWidget {
   final Widget child;
@@ -63,14 +61,7 @@ class FirebaseInitializer extends StatelessWidget {
 
         // Once complete, show the actual app
         if (snapshot.connectionState == ConnectionState.done) {
-          return MultiProvider(
-            providers: [
-              ChangeNotifierProvider(
-                create: (_) => AuthProvider()..initializeAuth(),
-              ),
-            ],
-            child: child,
-          );
+          return child;
         }
 
         // Otherwise, show a loading screen

@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"import base64; data=open\\('backend/service-account.json','rb'\\).read\\(\\); print\\(base64.b64encode\\(data\\).decode\\(\\)\\)\")",
+      "Bash(curl -s https://cargolink-notifications.onrender.com/)",
+      "Bash(curl -s -X POST https://cargolink-notifications.onrender.com/send-notification -H \"Content-Type: application/json\" -H \"x-api-key: super-secret-api-key-2026\" -d '{\"token\":\"cVD7jM98T9K53w3wKRUZFV:APA91bHr6hRYz1RF1XqjYz-JQ_GQQP1uvXX_0mk_CDpdDm2WwLAVHy4_nLcGCDWJWe3yq8Wb8hOfa8vvZOQ9hlpK9eFPhD-Pz98nXlxC62HSCiIGEKKVlgI\",\"title\":\"Test\",\"body\":\"Notification working!\"}')",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)"
+    ]
+  }
+}

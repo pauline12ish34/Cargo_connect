@@ -1,4 +1,3 @@
-import '../widgets/app_states.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
@@ -29,15 +28,18 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    authProvider.clearError();
 
     final success = await authProvider.signIn(
       email: emailController.text.trim(),
       password: passwordController.text,
     );
 
-    if (success && mounted) {
+    if (!mounted) return;
+
+    if (success) {
       Navigator.pushReplacementNamed(context, '/home');
-    } else if (mounted) {
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(authProvider.error ?? 'Login failed'),
@@ -53,12 +55,6 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: Colors.white,
       body: Consumer<AuthProvider>(
         builder: (context, authProvider, child) {
-          if (authProvider.isLoading) {
-            return const AppLoading(message: 'Logging in...');
-          }
-          if (authProvider.error != null && authProvider.error!.isNotEmpty) {
-            return AppError(message: authProvider.error!);
-          }
           return Padding(
             padding: const EdgeInsets.all(24),
             child: Form(

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../core/models/booking_model.dart';
 import '../../../core/enums/app_enums.dart';
@@ -87,16 +88,12 @@ class BookingProvider with ChangeNotifier {
         notifyListeners();
       }
 
-      // Notify driver of assignment
-      try {
-        await JobNotificationService.notifyJobStatus(
-          recipientId: driverId,
-          status: 'assigned',
-          bookingId: bookingId,
-        );
-      } catch (e) {
-        debugPrint('Failed to send driver notification: $e');
-      }
+      // Notify driver of assignment in background
+      unawaited(JobNotificationService.notifyJobStatus(
+        recipientId: driverId,
+        status: 'assigned',
+        bookingId: bookingId,
+      ));
 
       return true;
     } catch (e) {
@@ -163,18 +160,12 @@ class BookingProvider with ChangeNotifier {
         _availableBookings.removeAt(index);
         _myBookings.insert(0, updated);
 
-        // Send job status notification to cargo owner
-        await JobNotificationService.notifyJobStatus(
+        // Notify cargo owner that driver accepted
+        unawaited(JobNotificationService.notifyJobStatus(
           recipientId: updated.cargoOwnerId,
           status: 'accepted',
           bookingId: bookingId,
-        );
-        // Send job assignment notification to driver
-        await JobNotificationService.notifyJobStatus(
-          recipientId: updated.driverId!,
-          status: 'assigned',
-          bookingId: bookingId,
-        );
+        ));
       }
 
       return true;
@@ -202,6 +193,13 @@ class BookingProvider with ChangeNotifier {
         );
         _availableBookings.removeAt(index);
         _myBookings.insert(0, updated);
+
+        // Notify cargo owner that driver accepted
+        unawaited(JobNotificationService.notifyJobStatus(
+          recipientId: updated.cargoOwnerId,
+          status: 'accepted',
+          bookingId: bookingId,
+        ));
       }
 
       return true;
@@ -226,11 +224,11 @@ class BookingProvider with ChangeNotifier {
       _availableBookings.removeWhere((b) => b.id == bookingId);
 
       if (booking != null) {
-        await JobNotificationService.notifyJobStatus(
+        unawaited(JobNotificationService.notifyJobStatus(
           recipientId: booking.cargoOwnerId,
           status: 'declined',
           bookingId: bookingId,
-        );
+        ));
       }
 
       return true;
@@ -257,19 +255,12 @@ class BookingProvider with ChangeNotifier {
         );
         _myBookings[index] = updated;
 
-        // Send job status notification to cargo owner
-        await JobNotificationService.notifyJobStatus(
+        // Notify cargo owner that job is completed
+        unawaited(JobNotificationService.notifyJobStatus(
           recipientId: updated.cargoOwnerId,
           status: 'completed',
           bookingId: bookingId,
-        );
-        if (updated.driverId != null) {
-          await JobNotificationService.notifyJobStatus(
-            recipientId: updated.driverId!,
-            status: 'completed',
-            bookingId: bookingId,
-          );
-        }
+        ));
       }
 
       return true;
@@ -295,19 +286,17 @@ class BookingProvider with ChangeNotifier {
         );
         _myBookings[index] = updated;
 
-        // Send job status notification to cargo owner
-        await JobNotificationService.notifyJobStatus(
+        unawaited(JobNotificationService.notifyJobStatus(
           recipientId: updated.cargoOwnerId,
           status: 'cancelled',
           bookingId: bookingId,
-        );
-        // Notify driver if one was assigned
+        ));
         if (updated.driverId != null) {
-          await JobNotificationService.notifyJobStatus(
+          unawaited(JobNotificationService.notifyJobStatus(
             recipientId: updated.driverId!,
             status: 'cancelled',
             bookingId: bookingId,
-          );
+          ));
         }
       }
 

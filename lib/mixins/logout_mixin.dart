@@ -7,58 +7,50 @@ mixin LogoutMixin {
   void showLogoutConfirmation(BuildContext context) {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return AlertDialog(
           title: const Text('Logout'),
           content: const Text('Are you sure you want to log out?'),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
+              onPressed: () => Navigator.of(dialogContext).pop(),
               child: const Text('Cancel'),
             ),
             TextButton(
               onPressed: () async {
-                Navigator.of(context).pop();
+                Navigator.of(dialogContext).pop(); // dismiss confirmation dialog
+
+                // Capture everything before the async gap
+                final navigator = Navigator.of(context, rootNavigator: true);
+                final authProv = Provider.of<AuthProvider>(context, listen: false);
+                final profileProv = Provider.of<ProfileProvider>(context, listen: false);
 
                 // Show loading indicator
                 showDialog(
                   context: context,
                   barrierDismissible: false,
-                  builder: (BuildContext context) {
-                    return const AlertDialog(
-                      content: Row(
-                        children: [
-                          CircularProgressIndicator(),
-                          SizedBox(width: 16),
-                          Text('Logging out...'),
-                        ],
-                      ),
-                    );
-                  },
+                  builder: (_) => const AlertDialog(
+                    content: Row(
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(width: 16),
+                        Text('Logging out...'),
+                      ],
+                    ),
+                  ),
                 );
 
                 try {
-                  // Perform logout
-                  await Provider.of<AuthProvider>(
-                    context,
-                    listen: false,
-                  ).signOut();
+                  await authProv.signOut();
+                  profileProv.logout();
+                  authProv.clearError();
 
-                  // Clear profile data
-                  Provider.of<ProfileProvider>(context, listen: false).logout();
-
-                  // Navigate to login screen and clear navigation stack
-                  if (context.mounted) {
-                    Navigator.of(
-                      context,
-                    ).pushNamedAndRemoveUntil('/login', (route) => false);
-                  }
+                  // Pop loading dialog, then clear the full stack and go to login
+                  navigator.pop();
+                  navigator.pushNamedAndRemoveUntil('/login', (route) => false);
                 } catch (e) {
-                  // Hide loading dialog and show error
+                  navigator.pop(); // dismiss loading dialog
                   if (context.mounted) {
-                    Navigator.of(context).pop(); // Hide loading dialog
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('Logout failed: $e'),

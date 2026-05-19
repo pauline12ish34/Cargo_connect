@@ -17,21 +17,39 @@ import 'features/profile/providers/profile_provider.dart';
 import 'features/booking/providers/booking_provider.dart';
 import 'core/repositories/user_repository.dart';
 import 'core/repositories/booking_repository.dart';
-
 import 'providers/theme_provider.dart';
 import 'utils/app_theme.dart';
-
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'services/push_notification_service.dart';
 import 'services/device_token_service.dart';
 
+/// Global key so PushNotificationService can show SnackBars without a BuildContext.
+final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
+    GlobalKey<ScaffoldMessengerState>();
+
+/// Must be a top-level function. Called by FCM when the app is terminated/background.
+/// The [notification] field in the payload means FCM auto-shows the system notification,
+/// so no manual display is needed here.
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // Background display is handled automatically by FCM because our payload
+  // includes the 'notification' key. Nothing extra needed.
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return FirebaseInitializer(
@@ -44,73 +62,88 @@ class MyApp extends StatelessWidget {
           ProxyProvider0<BookingRepository>(
             update: (_, _) => FirebaseBookingRepository(),
           ),
-          // Add ChatRepository provider
           ProxyProvider0<ChatRepository>(
             update: (_, _) => FirebaseChatRepository(),
           ),
           ChangeNotifierProxyProvider<UserRepository, ProfileProvider>(
-            create: (context) => ProfileProvider(
-              Provider.of<UserRepository>(context, listen: false),
-            ),
+            create: (context) =>
+                ProfileProvider(Provider.of<UserRepository>(context, listen: false)),
             update: (context, userRepo, previous) =>
-            previous ?? ProfileProvider(userRepo),
+                previous ?? ProfileProvider(userRepo),
           ),
           ChangeNotifierProxyProvider<BookingRepository, BookingProvider>(
-            create: (context) => BookingProvider(
-              Provider.of<BookingRepository>(context, listen: false),
-            ),
+            create: (context) =>
+                BookingProvider(Provider.of<BookingRepository>(context, listen: false)),
             update: (context, bookingRepo, previous) =>
-            previous ?? BookingProvider(bookingRepo),
+                previous ?? BookingProvider(bookingRepo),
           ),
-          // ChatProvider depends on ChatRepository
           ChangeNotifierProxyProvider<ChatRepository, ChatProvider>(
-            create: (context) => ChatProvider(
-              Provider.of<ChatRepository>(context, listen: false),
-            ),
+            create: (context) =>
+                ChatProvider(Provider.of<ChatRepository>(context, listen: false)),
             update: (context, chatRepo, previous) =>
-            previous ?? ChatProvider(chatRepo),
+                previous ?? ChatProvider(chatRepo),
           ),
           ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ],
-        child: Consumer2<AuthProvider, ThemeProvider>(
-          builder: (context, authProvider, themeProvider, child) {
-            // Initialize auth state when the app starts
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              authProvider.initializeAuth();
-            });
-
-
-            // Initialize push notifications
-            PushNotificationService.initialize(context);
-
-            // Save device token and listen for refresh
-            DeviceTokenService.saveDeviceToken();
-            DeviceTokenService.listenForTokenRefresh();
-
-            return MaterialApp(
-              title: 'CargoLink',
-              debugShowCheckedModeBanner: false,
-              theme: AppTheme.lightTheme,
-              darkTheme: AppTheme.darkTheme,
-              themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
-              initialRoute: '/splash',
-              routes: {
-                '/splash': (context) => const SplashScreen(),
-                '/': (context) => WelcomeScreen(),
-                '/login': (context) => LoginScreen(),
-                '/signup': (context) => SignupScreen(),
-                '/forgot-password': (context) => const ForgetPasswordScreen(),
-                '/password-reset-confirmation': (context) =>
-                const PasswordResetConfirmation(),
-                '/email-verification': (context) =>
-                const EmailVerificationScreen(),
-                '/home': (context) => const Home(),
-                '/personal-data': (context) => const PersonalDataScreen(),
-              },
-            );
-          },
-        ),
+        // _AppBootstrap runs initialization exactly once after Firebase is ready.
+        child: const _AppBootstrap(),
       ),
+    );
+  }
+}
+
+/// Sits inside MultiProvider so it can access all providers.
+/// Runs one-time initialization in [initState] — never repeats on rebuild.
+class _AppBootstrap extends StatefulWidget {
+  const _AppBootstrap();
+
+  @override
+  State<_AppBootstrap> createState() => _AppBootstrapState();
+}
+
+class _AppBootstrapState extends State<_AppBootstrap> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      authProvider.initializeAuth();
+      DeviceTokenService.saveDeviceToken();
+      DeviceTokenService.listenForTokenRefresh();
+      // Notification listeners registered once here — uses the global key.
+      PushNotificationService.initialize(scaffoldMessengerKey);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, _) {
+        return MaterialApp(
+          title: 'CargoLink',
+          debugShowCheckedModeBanner: false,
+          scaffoldMessengerKey: scaffoldMessengerKey,
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode:
+              themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+          initialRoute: '/splash',
+          routes: {
+            '/splash': (context) => const SplashScreen(),
+            '/': (context) => WelcomeScreen(),
+            '/login': (context) => LoginScreen(),
+            '/signup': (context) => SignupScreen(),
+            '/forgot-password': (context) => const ForgetPasswordScreen(),
+            '/password-reset-confirmation': (context) =>
+                const PasswordResetConfirmation(),
+            '/email-verification': (context) =>
+                const EmailVerificationScreen(),
+            '/home': (context) => const Home(),
+            '/personal-data': (context) => const PersonalDataScreen(),
+          },
+        );
+      },
     );
   }
 }

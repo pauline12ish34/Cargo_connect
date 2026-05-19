@@ -1,6 +1,5 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-
-
 import '../../core/models/chat_model.dart';
 import '../../core/repositories/chat_repository.dart';
 import '../../services/cloud_function_service.dart' as notification_service;
@@ -65,28 +64,35 @@ class ChatProvider with ChangeNotifier {
       notifyListeners();
 
 
-      // Send push notification to recipient
+      // Send push notification to recipient — fire and forget, never block chat
       if (recipientId.isNotEmpty) {
-        try {
-          final userRepo = FirebaseUserRepository();
-          final recipient = await userRepo.getUserById(recipientId);
-          final fcmToken = recipient?.fcmToken;
-          if (fcmToken != null && fcmToken.isNotEmpty) {
-            await notification_service.NotificationService.sendNotificationToUser({
-              'token': fcmToken,
-              'title': 'New message from $senderName',
-              'body': content,
-            });
-          }
-        } catch (e) {
-          debugPrint('Failed to send chat notification: $e');
-        }
+        unawaited(_sendChatNotification(recipientId, senderName, content));
       }
 
       return true;
     } catch (e) {
       _setError('Failed to send message: $e');
       return false;
+    }
+  }
+
+  Future<void> _sendChatNotification(String recipientId, String senderName, String content) async {
+    try {
+      final userRepo = FirebaseUserRepository();
+      final recipient = await userRepo.getUserById(recipientId);
+      final fcmToken = recipient?.fcmToken;
+      if (fcmToken == null || fcmToken.isEmpty) {
+        debugPrint('⚠️  [Chat] No fcmToken for recipient $recipientId');
+        return;
+      }
+      await notification_service.NotificationService.sendNotificationToUser({
+        'token': fcmToken,
+        'title': 'New message from $senderName',
+        'body': content,
+      });
+      debugPrint('✅ [Chat] Notification sent to $recipientId');
+    } catch (e) {
+      debugPrint('❌ [Chat] Failed to send chat notification: $e');
     }
   }
 
