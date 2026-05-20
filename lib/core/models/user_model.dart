@@ -225,6 +225,7 @@ class UserModel {
   String? get profilePictureUrl => profileImageUrl;
   bool get isDriver => role == UserRole.driver;
   bool get isCargoOwner => role == UserRole.cargoOwner;
+  bool get isAdmin => role == UserRole.admin;
   
   // For drivers - basic vehicle info (since we don't have the complex Vehicle model)
   Map<String, dynamic>? get primaryVehicle => vehicleType != null ? {

@@ -1,8 +1,8 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../screens/notifications_screen.dart';
+import '../services/notification_store_service.dart';
 
 /// AppBar action icon that shows a red badge with the unread notification count.
 /// Tapping it opens [NotificationsScreen].
@@ -21,22 +21,16 @@ class NotificationBadgeIcon extends StatelessWidget {
       );
     }
 
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('notifications')
-          .doc(uid)
-          .collection('items')
-          .where('isRead', isEqualTo: false)
-          .snapshots(),
+    return StreamBuilder<int>(
+      stream: NotificationStoreService.unreadCountStream(uid),
       builder: (context, snapshot) {
-        final unread = snapshot.data?.docs.length ?? 0;
+        final unread = snapshot.data ?? 0;
 
         return IconButton(
           tooltip: 'Notifications',
           onPressed: () => Navigator.push(
             context,
-            MaterialPageRoute(
-                builder: (_) => const NotificationsScreen()),
+            MaterialPageRoute(builder: (_) => const NotificationsScreen()),
           ),
           icon: Stack(
             clipBehavior: Clip.none,

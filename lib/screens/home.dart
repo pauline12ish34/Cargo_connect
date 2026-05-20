@@ -5,6 +5,7 @@ import '../features/profile/providers/profile_provider.dart';
 import '../widgets/app_states.dart';
 import '../features/cargo_owner/screens/cargo_owner_home.dart';
 import '../features/driver/screens/driver_home.dart';
+import '../screens/admin/admin_home.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -72,15 +73,25 @@ class _HomeState extends State<Home> {
 
         // Redirect to role-specific home screen
         if (userModel != null) {
-          if (userModel.isCargoOwner) {
+          if (userModel.isAdmin) {
+            return const AdminHome();
+          } else if (userModel.isCargoOwner) {
             return const CargoOwnerHome();
           } else if (userModel.isDriver) {
             return const DriverHome();
           }
         }
 
-        // Fallback if user model is not loaded or role is unclear
-        return const AppEmpty(title: 'No profile found', subtitle: 'Please sign in again.');
+        // User logged out or session ended — send to welcome screen
+        if (!authProvider.isAuthenticated && !authProvider.isLoading) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              Navigator.pushReplacementNamed(context, '/');
+            }
+          });
+        }
+
+        return const Scaffold(body: AppLoading(message: 'Please wait...'));
       },
     );
   }

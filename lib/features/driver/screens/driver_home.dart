@@ -254,6 +254,15 @@ class _DashboardTab extends StatelessWidget {
                   ],
                 ),
               ),
+              // Verification banner — shown until driver is verified
+              if (user?.verificationStatus == 'pending' ||
+                  user?.verificationStatus == 'rejected') ...[
+                const SizedBox(height: 16),
+                _VerificationPromptBanner(
+                  status: user!.verificationStatus,
+                ),
+              ],
+
               const SizedBox(height: 24),
 
               // Quick Stats
@@ -1370,6 +1379,73 @@ class _ProfileOption extends StatelessWidget {
       subtitle: subtitle != null ? Text(subtitle!) : null,
       trailing: const Icon(Icons.chevron_right),
       onTap: onTap,
+    );
+  }
+}
+
+class _VerificationPromptBanner extends StatelessWidget {
+  final String status;
+  const _VerificationPromptBanner({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final isRejected = status == 'rejected';
+    final color = isRejected ? Colors.red : Colors.orange;
+    final icon = isRejected ? Icons.cancel_outlined : Icons.info_outline;
+    final title = isRejected
+        ? 'Verification Rejected'
+        : 'Documents Required to Take Jobs';
+    final message = isRejected
+        ? 'Your documents were not approved. Please update them and resubmit for review.'
+        : 'You are not yet verified. Submit your documents so the admin can approve your account.';
+    final buttonLabel = isRejected ? 'Update Documents' : 'Submit Documents';
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 18),
+              const SizedBox(width: 8),
+              Text(title,
+                  style: TextStyle(
+                      color: color,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14)),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(message,
+              style: TextStyle(fontSize: 13, color: color.withValues(alpha: 0.85))),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const DriverProfileEditScreen()),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: color,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
+              ),
+              child: Text(buttonLabel,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

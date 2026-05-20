@@ -85,6 +85,9 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
           pickupLocation: _pickupController.text.trim(),
           dropoffLocation: _dropoffController.text.trim(),
           bookingId: bookingId,
+          weightKg: _weightController.text.isNotEmpty
+              ? double.tryParse(_weightController.text)
+              : null,
         ),
       ));
     } else if (mounted) {

@@ -1,4 +1,4 @@
-enum UserRole { driver, cargoOwner }
+enum UserRole { driver, cargoOwner, admin }
 
 enum BookingStatus { pending, accepted, declined, inProgress, completed, cancelled }
 

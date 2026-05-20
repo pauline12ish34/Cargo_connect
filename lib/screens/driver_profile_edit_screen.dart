@@ -6,6 +6,7 @@ import '../core/repositories/user_repository.dart';
 import '../providers/auth_provider.dart';
 import '../features/profile/providers/profile_provider.dart';
 import '../mixins/image_picker_mixin.dart';
+import '../services/job_notification_service.dart';
 
 class DriverProfileEditScreen extends StatefulWidget {
   const DriverProfileEditScreen({super.key});
@@ -183,6 +184,15 @@ class _DriverProfileEditScreenState extends State<DriverProfileEditScreen> with 
         });
       }
 
+      // If any document was uploaded and status is still pending, move to under_review
+      final hasNewDoc = _driverLicenseFile != null ||
+          _nationalIdFile != null ||
+          _vehicleRegistrationFile != null ||
+          _vehicleImageFile != null;
+      final newStatus = (hasNewDoc && currentUser.verificationStatus == 'pending')
+          ? 'under_review'
+          : currentUser.verificationStatus;
+
       // Update basic profile information
       final updatedUser = currentUser.copyWith(
         name: _nameController.text.trim(),
@@ -190,27 +200,35 @@ class _DriverProfileEditScreenState extends State<DriverProfileEditScreen> with 
         driverLicenseNumber: _driverLicenseNumberController.text.trim(),
         vehicleType: _vehicleTypeController.text.trim(),
         vehicleCapacity: _vehicleCapacityController.text.trim(),
-        
+        verificationStatus: newStatus,
+
         // Update address fields
         street: _streetController.text.trim(),
         city: _cityController.text.trim(),
         state: _stateController.text.trim(),
         postalCode: _postalCodeController.text.trim(),
         country: _countryController.text.trim(),
-        
+
         // Migration: Clear old driverLicense field if it contains text (not a URL)
-        driverLicense: (currentUser.driverLicense != null && 
-                       !currentUser.driverLicense!.startsWith('http')) 
+        driverLicense: (currentUser.driverLicense != null &&
+                       !currentUser.driverLicense!.startsWith('http'))
                        ? null : currentUser.driverLicense,
-        
+
         updatedAt: DateTime.now(),
       );
 
       await _userRepository.updateUser(updatedUser);
-      
+
       // Update documents if any were uploaded
       if (documentUpdates.isNotEmpty) {
         await _userRepository.updateUserWithDocuments(currentUser.uid, documentUpdates);
+      }
+
+      // Notify admins when driver moves to under_review for the first time
+      if (newStatus == 'under_review' && currentUser.verificationStatus == 'pending') {
+        JobNotificationService.notifyAdminsPendingVerification(
+          _nameController.text.trim(),
+        );
       }
 
       // Refresh auth provider with updated user, then sync ProfileProvider
@@ -624,98 +642,98 @@ class _DriverProfileEditScreenState extends State<DriverProfileEditScreen> with 
               const SizedBox(height: 32),
               
               // Document Upload Section
-              // const Text(
-              //   'Required Documents',
-              //   style: TextStyle(
-              //     fontSize: 18,
-              //     fontWeight: FontWeight.bold,
-              //   ),
-              // ),
-              // const SizedBox(height: 8),
-              // Text(
-              //   'Upload your verification documents to complete your driver profile',
-              //   style: TextStyle(
-              //     color: Colors.grey[600],
-              //     fontSize: 14,
-              //   ),
-              // ),
-              // const SizedBox(height: 16),
-              //
-              // _buildDocumentUploadCard(
-              //   title: 'Driver\'s License',
-              //   description: 'Upload a clear photo of your valid driver\'s license',
-              //   onTap: () {
-              //     showDocumentPickerDialog(
-              //       context,
-              //       'Driver\'s License',
-              //       onDocumentSelected: (file) {
-              //         setState(() {
-              //           _driverLicenseFile = file;
-              //         });
-              //       },
-              //     );
-              //   },
-              //   isUploading: _driverLicenseUploading,
-              //   currentUrl: _user?.driverLicense,
-              //   selectedFile: _driverLicenseFile,
-              // ),
-              //
-              // _buildDocumentUploadCard(
-              //   title: 'National ID',
-              //   description: 'Upload a clear photo of your national ID card',
-              //   onTap: () {
-              //     showDocumentPickerDialog(
-              //       context,
-              //       'National ID',
-              //       onDocumentSelected: (file) {
-              //         setState(() {
-              //           _nationalIdFile = file;
-              //         });
-              //       },
-              //     );
-              //   },
-              //   isUploading: _nationalIdUploading,
-              //   currentUrl: _user?.nationalId,
-              //   selectedFile: _nationalIdFile,
-              // ),
-              //
-              // _buildDocumentUploadCard(
-              //   title: 'Vehicle Registration',
-              //   description: 'Upload your vehicle registration certificate',
-              //   onTap: () {
-              //     showDocumentPickerDialog(
-              //       context,
-              //       'Vehicle Registration',
-              //       onDocumentSelected: (file) {
-              //         setState(() {
-              //           _vehicleRegistrationFile = file;
-              //         });
-              //       },
-              //     );
-              //   },
-              //   isUploading: _vehicleRegistrationUploading,
-              //   currentUrl: _user?.vehicleRegistration,
-              //   selectedFile: _vehicleRegistrationFile,
-              // ),
-              //
-              // _buildDocumentUploadCard(
-              //   title: 'Vehicle Photo',
-              //   description: 'Upload a clear photo of your vehicle',
-              //   onTap: () {
-              //     showDocumentPickerDialog(
-              //       context,
-              //       'Vehicle Photo',
-              //       onDocumentSelected: (file) {
-              //         setState(() {
-              //           _vehicleImageFile = file;
-              //         });
-              //       },
-              //     );
-              //   },
-              //   isUploading: _vehicleImageUploading,
-              //   currentUrl: _user?.vehicleImageUrl,
-              //   selectedFile: _vehicleImageFile,
-              // ),
+              const Text(
+                'Required Documents',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Upload your verification documents. Use camera, gallery, or files.',
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              _buildDocumentUploadCard(
+                title: "Driver's License",
+                description: 'Clear photo of your valid driver\'s license',
+                onTap: () {
+                  showDocumentPickerDialog(
+                    context,
+                    "Driver's License",
+                    onDocumentSelected: (file) {
+                      setState(() {
+                        _driverLicenseFile = file;
+                      });
+                    },
+                  );
+                },
+                isUploading: _driverLicenseUploading,
+                currentUrl: _user?.driverLicense,
+                selectedFile: _driverLicenseFile,
+              ),
+
+              _buildDocumentUploadCard(
+                title: 'National ID',
+                description: 'Clear photo of your national ID card',
+                onTap: () {
+                  showDocumentPickerDialog(
+                    context,
+                    'National ID',
+                    onDocumentSelected: (file) {
+                      setState(() {
+                        _nationalIdFile = file;
+                      });
+                    },
+                  );
+                },
+                isUploading: _nationalIdUploading,
+                currentUrl: _user?.nationalId,
+                selectedFile: _nationalIdFile,
+              ),
+
+              _buildDocumentUploadCard(
+                title: 'Vehicle Registration',
+                description: 'Upload your vehicle registration certificate',
+                onTap: () {
+                  showDocumentPickerDialog(
+                    context,
+                    'Vehicle Registration',
+                    onDocumentSelected: (file) {
+                      setState(() {
+                        _vehicleRegistrationFile = file;
+                      });
+                    },
+                  );
+                },
+                isUploading: _vehicleRegistrationUploading,
+                currentUrl: _user?.vehicleRegistration,
+                selectedFile: _vehicleRegistrationFile,
+              ),
+
+              _buildDocumentUploadCard(
+                title: 'Vehicle Photo',
+                description: 'Clear photo of your vehicle',
+                onTap: () {
+                  showDocumentPickerDialog(
+                    context,
+                    'Vehicle Photo',
+                    onDocumentSelected: (file) {
+                      setState(() {
+                        _vehicleImageFile = file;
+                      });
+                    },
+                  );
+                },
+                isUploading: _vehicleImageUploading,
+                currentUrl: _user?.vehicleImageUrl,
+                selectedFile: _vehicleImageFile,
+              ),
               
               const SizedBox(height: 32),
               

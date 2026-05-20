@@ -13,6 +13,7 @@ class DriverSelectionScreen extends StatefulWidget {
   final String dropoffLocation;
   final bool isReassignment;
   final String? bookingId;
+  final double? weightKg; // cargo weight in kg — filters by driver capacity
 
   const DriverSelectionScreen({
     super.key,
@@ -21,6 +22,7 @@ class DriverSelectionScreen extends StatefulWidget {
     required this.dropoffLocation,
     this.isReassignment = false,
     this.bookingId,
+    this.weightKg,
   });
 
   @override
@@ -38,6 +40,32 @@ class _DriverSelectionScreenState extends State<DriverSelectionScreen> {
     super.initState();
     _userRepository = FirebaseUserRepository();
     _driversFuture = _fetchCompatibleDrivers();
+  }
+
+  /// Parses a free-text capacity string (e.g. "5 tons", "1500 kg", "2 tonnes")
+  /// and returns the equivalent value in kg. Returns null if unparseable.
+  double? _parseCapacityToKg(String? capacityStr) {
+    if (capacityStr == null || capacityStr.isEmpty) return null;
+    final s = capacityStr.toLowerCase().trim();
+    // Extract the leading number (integer or decimal)
+    final match = RegExp(r'[\d]+(?:[.,]\d+)?').firstMatch(s);
+    if (match == null) return null;
+    final num = double.tryParse(match.group(0)!.replaceAll(',', '.'));
+    if (num == null) return null;
+    if (s.contains('ton') || s.contains('tonne')) return num * 1000;
+    if (s.contains('kg')) return num;
+    if (s.contains('lb')) return num * 0.453592;
+    // bare number — assume tons if >= 100, else assume tons too (common input)
+    return num * 1000;
+  }
+
+  /// Returns true if the driver's vehicle can carry [cargoWeightKg].
+  /// If weight is null or capacity is unparseable, the driver is included.
+  bool _canCarryWeight(String? capacityStr, double? cargoWeightKg) {
+    if (cargoWeightKg == null) return true;
+    final driverCapacityKg = _parseCapacityToKg(capacityStr);
+    if (driverCapacityKg == null) return true; // can't determine — include
+    return driverCapacityKg >= cargoWeightKg;
   }
 
   /// Matches free-text vehicle type from driver profile against the required enum.
@@ -61,7 +89,9 @@ class _DriverSelectionScreenState extends State<DriverSelectionScreen> {
     final compatible = allDrivers
         .where((d) =>
             d.isAvailable == true &&
-            _matchesVehicleType(d.vehicleType, widget.vehicleType))
+            d.isVerified &&
+            _matchesVehicleType(d.vehicleType, widget.vehicleType) &&
+            _canCarryWeight(d.vehicleCapacity, widget.weightKg))
         .toList();
     // Sort by rating descending; drivers with no rating go to the end.
     compatible.sort((a, b) {
@@ -117,6 +147,22 @@ class _DriverSelectionScreenState extends State<DriverSelectionScreen> {
                   ],
                 ),
               ),
+              if (widget.weightKg != null) ...[
+                const SizedBox(height: 6),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.scale, size: 14, color: Colors.grey),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Showing drivers that can carry ${widget.weightKg!.toStringAsFixed(0)} kg',
+                        style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 10),
 
               // Search bar
@@ -163,7 +209,7 @@ class _DriverSelectionScreenState extends State<DriverSelectionScreen> {
                       return AppEmpty(
                         icon: Icons.person_off_outlined,
                         title: 'No drivers available',
-                        subtitle: 'No ${widget.vehicleType.name} drivers are online right now. Try again later.',
+                        subtitle: 'No verified ${widget.vehicleType.name} drivers are online right now. Try again later.',
                       );
                     }
 

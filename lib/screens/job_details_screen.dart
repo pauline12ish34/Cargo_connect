@@ -238,23 +238,6 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
                               ),
                             ],
                           ),
-                          if (widget.booking.status == BookingStatus.accepted ||
-                              widget.booking.status ==
-                                  BookingStatus.inProgress) ...[
-                            const SizedBox(height: 16),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton.icon(
-                                onPressed: _openChat,
-                                icon: const Icon(Icons.chat),
-                                label: const Text('Open Chat'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: primaryGreen,
-                                  foregroundColor: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ],
                         ],
                       ),
                     ),
