@@ -25,6 +25,7 @@ class JobDetailsScreen extends StatefulWidget {
 
 class _JobDetailsScreenState extends State<JobDetailsScreen> {
   UserModel? _assignedDriver;
+  UserModel? _cargoOwner;
   bool _isLoading = false;
   bool _hasRated = false;
   bool _hasRatedOwner = false;
@@ -33,6 +34,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
   void initState() {
     super.initState();
     _loadDriverInfo();
+    _loadCargoOwnerInfo();
     _checkIfRated();
     _checkIfRatedOwner();
   }
@@ -75,6 +77,18 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
       } finally {
         setState(() => _isLoading = false);
       }
+    }
+  }
+
+  Future<void> _loadCargoOwnerInfo() async {
+    if (widget.booking.cargoOwnerId.isNotEmpty) {
+      try {
+        final userRepository =
+            Provider.of<UserRepository>(context, listen: false);
+        final owner =
+            await userRepository.getUserById(widget.booking.cargoOwnerId);
+        if (mounted) setState(() => _cargoOwner = owner);
+      } catch (_) {}
     }
   }
 
@@ -650,6 +664,8 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
 
     final otherUserName =
         isCargoOwner ? (_assignedDriver?.name ?? 'Driver') : 'Cargo Owner';
+    final otherUserSubtitle =
+        isCargoOwner ? null : (_cargoOwner?.name);
 
     Navigator.push(
       context,
@@ -657,6 +673,7 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
         builder: (context) => ChatScreen(
           booking: widget.booking,
           otherUserName: otherUserName,
+          otherUserSubtitle: otherUserSubtitle,
         ),
       ),
     );

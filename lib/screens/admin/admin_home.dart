@@ -226,9 +226,13 @@ class _VerificationTab extends StatelessWidget {
   Stream<List<UserModel>> _stream() => FirebaseFirestore.instance
       .collection('users')
       .where('role', isEqualTo: 'driver')
-      .where('verificationStatus', whereIn: ['pending', 'under_review'])
       .snapshots()
-      .map((s) => s.docs.map((d) => UserModel.fromFirestore(d)).toList());
+      .map((s) => s.docs
+          .map((d) => UserModel.fromFirestore(d))
+          .where((u) =>
+              u.verificationStatus == 'pending' ||
+              u.verificationStatus == 'under_review')
+          .toList());
 
   Future<void> _updateStatus(
       BuildContext context, String uid, String status) async {
@@ -503,6 +507,135 @@ class _UserTile extends StatelessWidget {
   final UserModel user;
   const _UserTile({required this.user});
 
+  Future<void> _updateStatus(BuildContext context, String status) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update({'verificationStatus': status, 'updatedAt': Timestamp.now()});
+      await JobNotificationService.notifyDriverVerificationResult(
+          driverId: user.uid, status: status);
+      if (context.mounted) {
+        AppSnackbar.showSuccess(
+          context,
+          status == 'verified' ? '${user.name} approved!' : '${user.name} rejected.',
+        );
+      }
+    } catch (e) {
+      if (context.mounted) AppSnackbar.showError(context, 'Error: $e');
+    }
+  }
+
+  void _showActions(BuildContext context) {
+    if (!user.isDriver) return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (ctx) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          minChildSize: 0.4,
+          maxChildSize: 0.92,
+          expand: false,
+          builder: (_, scrollController) => SingleChildScrollView(
+            controller: scrollController,
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Driver header
+                Row(children: [
+                  CircleAvatar(
+                    radius: 22,
+                    backgroundColor: primaryGreen,
+                    backgroundImage: user.profileImageUrl != null
+                        ? NetworkImage(user.profileImageUrl!)
+                        : null,
+                    child: user.profileImageUrl == null
+                        ? Text(user.name[0].toUpperCase(),
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
+                        : null,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(user.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      Text(user.email, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                    ]),
+                  ),
+                ]),
+                const SizedBox(height: 4),
+                if (user.phoneNumber.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Row(children: [
+                      Icon(Icons.phone, size: 14, color: Colors.grey.shade500),
+                      const SizedBox(width: 6),
+                      Text(user.phoneNumber, style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
+                    ]),
+                  ),
+                if (user.vehicleType != null) ...[
+                  const SizedBox(height: 4),
+                  Row(children: [
+                    Icon(Icons.local_shipping, size: 14, color: Colors.grey.shade500),
+                    const SizedBox(width: 6),
+                    Text('${user.vehicleType}  ·  ${user.vehicleCapacity ?? ''}',
+                        style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
+                  ]),
+                ],
+                const Divider(height: 24),
+                // Documents
+                const Text('Documents', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                const SizedBox(height: 10),
+                _DocumentChips(driver: user),
+                const Divider(height: 24),
+                // Actions
+                const Text('Change Verification Status',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                const SizedBox(height: 12),
+                Row(children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _updateStatus(context, 'rejected');
+                      },
+                      icon: const Icon(Icons.close, size: 16),
+                      label: const Text('Reject'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        side: const BorderSide(color: Colors.red),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _updateStatus(context, 'verified');
+                      },
+                      icon: const Icon(Icons.check, size: 16),
+                      label: const Text('Approve'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryGreen,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                  ),
+                ]),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDriver = user.isDriver;
@@ -534,63 +667,65 @@ class _UserTile extends StatelessWidget {
     return Card(
       elevation: 1,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 22,
-              backgroundColor: color.withValues(alpha: 0.15),
-              backgroundImage: user.profileImageUrl != null
-                  ? NetworkImage(user.profileImageUrl!)
-                  : null,
-              child: user.profileImageUrl == null
-                  ? Text(user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
-                      style: TextStyle(
-                          color: color, fontWeight: FontWeight.bold))
-                  : null,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      child: InkWell(
+        onTap: isDriver ? () => _showActions(context) : null,
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: color.withValues(alpha: 0.15),
+                backgroundImage: user.profileImageUrl != null
+                    ? NetworkImage(user.profileImageUrl!)
+                    : null,
+                child: user.profileImageUrl == null
+                    ? Text(user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
+                        style: TextStyle(color: color, fontWeight: FontWeight.bold))
+                    : null,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(user.name,
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                    Text(user.email,
+                        style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(user.name,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w600, fontSize: 14)),
-                  Text(user.email,
-                      style: TextStyle(
-                          fontSize: 11, color: Colors.grey.shade600)),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(roleLabel,
+                        style: TextStyle(
+                            fontSize: 10, color: color, fontWeight: FontWeight.w600)),
+                  ),
+                  if (isDriver && statusLabel.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(statusLabel,
+                        style: TextStyle(
+                            fontSize: 10,
+                            color: statusColor,
+                            fontWeight: FontWeight.w500)),
+                  ],
+                  if (isDriver) ...[
+                    const SizedBox(height: 2),
+                    Icon(Icons.chevron_right, size: 14, color: Colors.grey.shade400),
+                  ],
                 ],
               ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(roleLabel,
-                      style: TextStyle(
-                          fontSize: 10,
-                          color: color,
-                          fontWeight: FontWeight.w600)),
-                ),
-                if (isDriver && statusLabel.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(statusLabel,
-                      style: TextStyle(
-                          fontSize: 10,
-                          color: statusColor,
-                          fontWeight: FontWeight.w500)),
-                ],
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

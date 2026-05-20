@@ -11,7 +11,8 @@ class NotificationBadgeIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final uid = Provider.of<AuthProvider>(context, listen: false).user?.uid;
+    // listen: true so the badge rebuilds when auth state changes
+    final uid = Provider.of<AuthProvider>(context).user?.uid;
 
     if (uid == null) {
       return IconButton(

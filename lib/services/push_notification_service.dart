@@ -17,7 +17,7 @@ class PushNotificationService {
   static GlobalKey<NavigatorState>? _navigatorKey;
 
   static const _channel = AndroidNotificationChannel(
-    'cargolink_high',
+    'cargolink_v2',
     'CargoLink Notifications',
     description: 'Job updates and chat messages',
     importance: Importance.high,
@@ -56,26 +56,30 @@ class PushNotificationService {
       },
     );
 
-    await _localNotifications
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(_channel);
+    final androidPlugin = _localNotifications
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    await androidPlugin?.createNotificationChannel(_channel);
+    await androidPlugin?.requestNotificationsPermission();
 
-    // Foreground: show popup and store data in payload for tap handling
+    // Foreground: show popup.
+    // Works for both notification messages AND data-only messages.
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      final notification = message.notification;
-      if (notification == null) return;
+      // Resolve title/body from notification field first, fall back to data map.
+      final title = message.notification?.title ?? message.data['title'] as String?;
+      final body  = message.notification?.body  ?? message.data['body']  as String?;
 
-      // Suppress chat notification if user is already in that chat
+      if (title == null || title.isEmpty) return;
+
+      // Suppress chat notification if user is already in that chat.
       if (message.data['type'] == 'chat' &&
           message.data['bookingId'] == activeChatBookingId) {
         return;
       }
 
       _localNotifications.show(
-        notification.hashCode,
-        notification.title,
-        notification.body,
+        message.hashCode,
+        title,
+        body,
         NotificationDetails(
           android: AndroidNotificationDetails(
             _channel.id,

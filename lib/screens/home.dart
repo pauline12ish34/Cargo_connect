@@ -35,6 +35,7 @@ class _HomeState extends State<Home> {
 
     if (user != null) {
       await profileProvider.loadUserProfile(user.uid);
+      profileProvider.streamUserProfile(user.uid); // keep in sync with Firestore
       debugPrint('Profile loaded for user: ${user.uid}');
     } else {
       // If no user in auth provider, try to refresh user data

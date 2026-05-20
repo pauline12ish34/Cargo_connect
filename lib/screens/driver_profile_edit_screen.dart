@@ -367,11 +367,13 @@ class _DriverProfileEditScreenState extends State<DriverProfileEditScreen> with 
                     )
                   : const Icon(Icons.upload, size: 18),
                 label: Text(
-                  isUploading 
-                    ? 'Uploading...' 
-                    : selectedFile != null || currentUrl != null 
-                      ? 'Replace Document' 
-                      : 'Upload Document',
+                  isUploading
+                      ? 'Uploading…'
+                      : selectedFile != null
+                          ? 'Change Selection'
+                          : currentUrl != null
+                              ? 'Replace Document'
+                              : 'Select Document',
                   style: const TextStyle(fontSize: 14),
                 ),
                 style: ElevatedButton.styleFrom(
@@ -650,11 +652,24 @@ class _DriverProfileEditScreenState extends State<DriverProfileEditScreen> with 
                 ),
               ),
               const SizedBox(height: 8),
-              Text(
-                'Upload your verification documents. Use camera, gallery, or files.',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 14,
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.blue, size: 18),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Select your documents below, then tap Save Profile to upload them to the system.',
+                        style: TextStyle(fontSize: 13, color: Colors.blue),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 16),

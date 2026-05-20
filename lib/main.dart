@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:cargo_app/core/repositories/chat_repository.dart';
 import 'package:cargo_app/features/chat/chat_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:provider/provider.dart';
 import 'widgets/firebase_initializer.dart';
 import 'screens/welcome_screen.dart';
@@ -33,8 +35,45 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 /// so no manual display is needed here.
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // Background display is handled automatically by FCM because our payload
-  // includes the 'notification' key. Nothing extra needed.
+  // For notification messages FCM auto-displays the banner.
+  // For data-only messages we must show it ourselves via local notifications.
+  if (message.notification != null) return; // FCM handles it
+
+  final title = message.data['title'] as String?;
+  final body  = message.data['body']  as String?;
+  if (title == null || title.isEmpty) return;
+
+  const channel = AndroidNotificationChannel(
+    'cargolink_v2',
+    'CargoLink Notifications',
+    importance: Importance.high,
+  );
+
+  final plugin = FlutterLocalNotificationsPlugin();
+  await plugin.initialize(
+    const InitializationSettings(
+      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+    ),
+  );
+  await plugin
+      .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+      ?.createNotificationChannel(channel);
+
+  await plugin.show(
+    message.hashCode,
+    title,
+    body,
+    NotificationDetails(
+      android: AndroidNotificationDetails(
+        channel.id,
+        channel.name,
+        importance: Importance.high,
+        priority: Priority.high,
+        icon: '@mipmap/ic_launcher',
+      ),
+    ),
+    payload: jsonEncode(message.data),
+  );
 }
 
 void main() async {

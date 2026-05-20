@@ -14,11 +14,13 @@ import 'package:cargo_app/constants.dart';
 class ChatScreen extends StatefulWidget {
   final BookingModel booking;
   final String otherUserName;
+  final String? otherUserSubtitle;
 
   const ChatScreen({
     super.key,
     required this.booking,
     required this.otherUserName,
+    this.otherUserSubtitle,
   });
 
   @override
@@ -238,10 +240,16 @@ class _ChatScreenState extends State<ChatScreen> {
               widget.otherUserName,
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-            Text(
-              widget.booking.cargoDescription,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
-            ),
+            if (widget.otherUserSubtitle != null)
+              Text(
+                widget.otherUserSubtitle!,
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+              )
+            else
+              Text(
+                widget.booking.cargoDescription,
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+              ),
           ],
         ),
         backgroundColor: primaryGreen,

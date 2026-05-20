@@ -118,17 +118,9 @@ mixin ImagePickerMixin {
 
   Future<void> pickImageFromGallery(BuildContext context, {Function(File)? onImageSelected}) async {
     try {
-      // Request photo permission
-      final photoPermission = await Permission.photos.request();
-      if (photoPermission.isDenied) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Photo access permission is required')),
-          );
-        }
-        return;
-      }
-
+      // image_picker handles its own permission request internally.
+      // On Android 13+ Permission.photos can return denied even when granted,
+      // so we let the plugin manage it and only surface real errors.
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
         maxWidth: 1920,

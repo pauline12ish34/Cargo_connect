@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../../../core/models/user_model.dart';
 import '../../../core/enums/app_enums.dart';
@@ -8,6 +9,7 @@ class ProfileProvider extends ChangeNotifier {
   UserModel? _currentUser;
   bool _isLoading = false;
   String? _error;
+  StreamSubscription<UserModel?>? _userSubscription;
 
   ProfileProvider(this._userRepository);
 
@@ -102,23 +104,22 @@ class ProfileProvider extends ChangeNotifier {
     return await updateProfile(updatedUser);
   }
 
-  // Stream user profile changes
+  // Stream user profile changes — cancels any previous subscription first.
   void streamUserProfile(String uid) {
-    _userRepository
-        .userStream(uid)
-        .listen(
-          (user) {
-            if (user != null) {
-              _currentUser = user;
-              notifyListeners();
-            }
-          },
-          onError: (e) {
-            _error = 'Profile stream error: $e';
-            debugPrint('Error in user profile stream: $e');
-            notifyListeners();
-          },
-        );
+    _userSubscription?.cancel();
+    _userSubscription = _userRepository.userStream(uid).listen(
+      (user) {
+        if (user != null) {
+          _currentUser = user;
+          notifyListeners();
+        }
+      },
+      onError: (e) {
+        _error = 'Profile stream error: $e';
+        debugPrint('Error in user profile stream: $e');
+        notifyListeners();
+      },
+    );
   }
 
   // Check if profile is complete
@@ -209,6 +210,8 @@ class ProfileProvider extends ChangeNotifier {
 
   // Clear profile data
   void clearProfile() {
+    _userSubscription?.cancel();
+    _userSubscription = null;
     _currentUser = null;
     _error = null;
     _isLoading = false;
@@ -217,6 +220,8 @@ class ProfileProvider extends ChangeNotifier {
 
   // Clear user data on logout
   void logout() {
+    _userSubscription?.cancel();
+    _userSubscription = null;
     _currentUser = null;
     _isLoading = false;
     _error = null;

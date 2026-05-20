@@ -1,8 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/models/user_model.dart';
 import '../core/repositories/user_repository.dart';
 import '../providers/auth_provider.dart';
+import '../mixins/image_picker_mixin.dart';
 import '../constants.dart';
 
 class CargoOwnerProfileEditScreen extends StatefulWidget {
@@ -14,7 +16,7 @@ class CargoOwnerProfileEditScreen extends StatefulWidget {
 }
 
 class _CargoOwnerProfileEditScreenState
-    extends State<CargoOwnerProfileEditScreen> {
+    extends State<CargoOwnerProfileEditScreen> with ImagePickerMixin {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -26,6 +28,7 @@ class _CargoOwnerProfileEditScreenState
   final UserRepository _userRepository = FirebaseUserRepository();
   bool _isLoading = false;
   UserModel? _user;
+  File? _profileImage;
 
   @override
   void initState() {
@@ -76,7 +79,13 @@ class _CargoOwnerProfileEditScreenState
 
     setState(() => _isLoading = true);
     try {
+      String? profileImageUrl;
+      if (_profileImage != null) {
+        profileImageUrl = await _userRepository.uploadProfileImage(_user!.uid, _profileImage!);
+      }
+
       final updated = _user!.copyWith(
+        profileImageUrl: profileImageUrl ?? _user!.profileImageUrl,
         name: _nameController.text.trim(),
         phoneNumber: _phoneController.text.trim(),
         companyName: _companyNameController.text.trim().isEmpty
@@ -152,6 +161,49 @@ class _CargoOwnerProfileEditScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Profile picture
+                    Center(
+                      child: GestureDetector(
+                        onTap: () => showImagePickerDialog(
+                          context,
+                          onImageSelected: (file) => setState(() => _profileImage = file),
+                        ),
+                        child: Stack(
+                          children: [
+                            CircleAvatar(
+                              radius: 50,
+                              backgroundColor: primaryGreen.withValues(alpha: 0.15),
+                              backgroundImage: _profileImage != null
+                                  ? FileImage(_profileImage!)
+                                  : (_user?.profileImageUrl != null
+                                      ? NetworkImage(_user!.profileImageUrl!) as ImageProvider
+                                      : null),
+                              child: (_profileImage == null && _user?.profileImageUrl == null)
+                                  ? const Icon(Icons.person, size: 50, color: Colors.grey)
+                                  : null,
+                            ),
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: const BoxDecoration(
+                                  color: primaryGreen,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Center(
+                      child: Text('Tap to change photo',
+                          style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    ),
+                    const SizedBox(height: 24),
                     _sectionHeader('Personal Information'),
                     const SizedBox(height: 12),
                     TextFormField(
