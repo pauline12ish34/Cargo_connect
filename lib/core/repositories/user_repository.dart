@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import '../models/user_model.dart';
 import '../enums/app_enums.dart';
+import '../../services/cloudinary_service.dart';
 
 abstract class UserRepository {
   Future<UserModel?> getUserById(String uid);
@@ -17,7 +17,6 @@ abstract class UserRepository {
 
 class FirebaseUserRepository implements UserRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
   static const String _collectionName = 'users';
 
   @override
@@ -80,13 +79,7 @@ class FirebaseUserRepository implements UserRepository {
   @override
   Future<String> uploadProfileImage(String uid, File imageFile) async {
     try {
-      final String fileName = 'profile_$uid.${imageFile.path.split('.').last}';
-      final Reference ref = _storage.ref().child('users/$uid/profile/$fileName');
-      
-      await ref.putFile(imageFile);
-      final String downloadUrl = await ref.getDownloadURL();
-      
-      return downloadUrl;
+      return await CloudinaryService.uploadFile(imageFile, folder: 'users/$uid/profile');
     } catch (e) {
       throw Exception('Failed to upload profile image: $e');
     }
@@ -95,13 +88,7 @@ class FirebaseUserRepository implements UserRepository {
   @override
   Future<String> uploadDocument(String uid, File documentFile, String documentType) async {
     try {
-      final String fileName = '${documentType}_$uid.${documentFile.path.split('.').last}';
-      final Reference ref = _storage.ref().child('users/$uid/documents/$fileName');
-      
-      await ref.putFile(documentFile);
-      final String downloadUrl = await ref.getDownloadURL();
-      
-      return downloadUrl;
+      return await CloudinaryService.uploadFile(documentFile, folder: 'users/$uid/documents');
     } catch (e) {
       throw Exception('Failed to upload $documentType: $e');
     }
