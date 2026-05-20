@@ -532,8 +532,10 @@ class _ProfileTab extends StatelessWidget {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    Navigator.pushNamedAndRemoveUntil(
-                        context, '/', (route) => false);
+                    final navigator = Navigator.of(context, rootNavigator: true);
+                    final profileProv = Provider.of<ProfileProvider>(context, listen: false);
+                    profileProv.logout();
+                    navigator.pushNamedAndRemoveUntil('/login', (route) => false);
                     authProvider.signOut();
                   },
                   style: ElevatedButton.styleFrom(

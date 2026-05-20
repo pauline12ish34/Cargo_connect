@@ -5,6 +5,7 @@ import '../../constants.dart';
 import '../../core/models/user_model.dart';
 import '../../core/models/booking_model.dart';
 import '../../providers/auth_provider.dart';
+import '../../features/profile/providers/profile_provider.dart';
 import '../../services/job_notification_service.dart';
 import '../../widgets/app_states.dart';
 
@@ -55,8 +56,13 @@ class _AdminHomeState extends State<AdminHome> {
             ),
             onSelected: (v) {
               if (v == 'logout') {
-                Provider.of<AuthProvider>(context, listen: false).signOut();
-                Navigator.pushReplacementNamed(context, '/');
+                final navigator = Navigator.of(context, rootNavigator: true);
+                final authProv = Provider.of<AuthProvider>(context, listen: false);
+                final profileProv = Provider.of<ProfileProvider>(context, listen: false);
+                // Clear profile and navigate first — avoids black screen
+                profileProv.logout();
+                navigator.pushNamedAndRemoveUntil('/login', (route) => false);
+                authProv.signOut();
               }
             },
             itemBuilder: (_) => [

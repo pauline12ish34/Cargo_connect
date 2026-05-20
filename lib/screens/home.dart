@@ -54,8 +54,16 @@ class _HomeState extends State<Home> {
   Widget build(BuildContext context) {
     return Consumer2<AuthProvider, ProfileProvider>(
       builder: (context, authProvider, profileProvider, child) {
+        // Check auth FIRST — stale profile data must not override a logged-out state
+        if (!authProvider.isAuthenticated && !authProvider.isLoading) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) Navigator.pushReplacementNamed(context, '/');
+          });
+          return const Scaffold(body: AppLoading(message: 'Signing out...'));
+        }
+
         // Show loading while fetching user profile
-        if (profileProvider.isLoading) {
+        if (profileProvider.isLoading || authProvider.isLoading) {
           return const Scaffold(body: AppLoading(message: 'Loading your profile...'));
         }
 
@@ -80,15 +88,6 @@ class _HomeState extends State<Home> {
           } else if (userModel.isDriver) {
             return const DriverHome();
           }
-        }
-
-        // User logged out or session ended — send to welcome screen
-        if (!authProvider.isAuthenticated && !authProvider.isLoading) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              Navigator.pushReplacementNamed(context, '/');
-            }
-          });
         }
 
         return const Scaffold(body: AppLoading(message: 'Please wait...'));
