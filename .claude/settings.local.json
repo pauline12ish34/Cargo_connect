@@ -7,7 +7,10 @@
       "Bash(git add *)",
       "Bash(git commit *)",
       "Bash(git push *)",
-      "Bash(curl -s -X POST https://cargolink-notifications.onrender.com/send-notification -H \"Content-Type: application/json\" -H \"x-api-key: super-secret-api-key-2026\" -d '{\"token\":\"dvP9qgYrR3ChslCQsjL-G4:APA91bHwPmb-3UgkdVIDyO_PoOrC1C_EMi8Ov9dENVoytpzChZQpcOEUpqwvABuF7kLwCwQMYzfZ-p4udVcUA\",\"title\":\"Test for Driver\",\"body\":\"Sony phone - can you see this?\"}')"
+      "Bash(curl -s -X POST https://cargolink-notifications.onrender.com/send-notification -H \"Content-Type: application/json\" -H \"x-api-key: super-secret-api-key-2026\" -d '{\"token\":\"dvP9qgYrR3ChslCQsjL-G4:APA91bHwPmb-3UgkdVIDyO_PoOrC1C_EMi8Ov9dENVoytpzChZQpcOEUpqwvABuF7kLwCwQMYzfZ-p4udVcUA\",\"title\":\"Test for Driver\",\"body\":\"Sony phone - can you see this?\"}')",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\pauli\\\\Documents\\\\cargo--App-main\\\\lib\" -Recurse -Filter \"*.dart\")",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Sort-Object)"
     ]
   }
 }

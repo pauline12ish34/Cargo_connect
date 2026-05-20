@@ -596,18 +596,47 @@ class _ProfileTab extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    CircleAvatar(
-                      radius: 40,
-                      backgroundColor: primaryGreen,
-                      child: Text(
-                        user?.name.isNotEmpty == true
-                            ? user!.name[0].toUpperCase()
-                            : 'D',
-                        style: const TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                    GestureDetector(
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const DriverProfileEditScreen(),
                         ),
+                      ),
+                      child: Stack(
+                        children: [
+                          CircleAvatar(
+                            radius: 40,
+                            backgroundColor: primaryGreen,
+                            backgroundImage: user?.profileImageUrl != null
+                                ? NetworkImage(user!.profileImageUrl!)
+                                : null,
+                            child: user?.profileImageUrl == null
+                                ? Text(
+                                    user?.name.isNotEmpty == true
+                                        ? user!.name[0].toUpperCase()
+                                        : 'D',
+                                    style: const TextStyle(
+                                      fontSize: 32,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : null,
+                          ),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: primaryGreen,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 2),
+                              ),
+                              child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -671,6 +700,8 @@ class _ProfileTab extends StatelessWidget {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 8),
+                    _VerificationBadge(status: user?.verificationStatus ?? 'pending'),
                     const SizedBox(height: 16),
                     Row(
                       children: [
@@ -1339,6 +1370,41 @@ class _ProfileOption extends StatelessWidget {
       subtitle: subtitle != null ? Text(subtitle!) : null,
       trailing: const Icon(Icons.chevron_right),
       onTap: onTap,
+    );
+  }
+}
+
+class _VerificationBadge extends StatelessWidget {
+  final String status;
+  const _VerificationBadge({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final config = switch (status) {
+      'verified'     => (Icons.verified, Colors.green,   'Verified'),
+      'under_review' => (Icons.hourglass_top, Colors.blue, 'Under Review'),
+      'rejected'     => (Icons.cancel, Colors.red,       'Rejected — update your documents'),
+      _              => (Icons.pending, Colors.orange,   'Pending Verification'),
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: config.$2.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: config.$2.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(config.$1, size: 14, color: config.$2),
+          const SizedBox(width: 4),
+          Text(
+            config.$3,
+            style: TextStyle(fontSize: 12, color: config.$2, fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
     );
   }
 }

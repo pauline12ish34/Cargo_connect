@@ -1,8 +1,13 @@
 import 'package:cargo_app/widgets/review_dialogue.dart';
 import 'package:flutter/material.dart';
 
-void showPaymentDialog(BuildContext context) {
+void showPaymentDialog(BuildContext context, {double price = 80000}) {
   final phoneController = TextEditingController();
+  final tax = (price * 0.05).roundToDouble();
+  final total = price + tax;
+
+  String formatRwf(double amount) =>
+      'Rwf ${amount.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
 
   showDialog(
     context: context,
@@ -18,21 +23,21 @@ void showPaymentDialog(BuildContext context) {
             padding: const EdgeInsets.all(8),
             color: Colors.orange[50],
             child: Column(
-              children: const [
+              children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [Text("Subtotal"), Text("Rwf 80,000")],
+                  children: [const Text("Subtotal"), Text(formatRwf(price))],
                 ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [Text("Tax"), Text("Rwf 2,300")],
+                  children: [const Text("Tax (5%)"), Text(formatRwf(tax))],
                 ),
-                Divider(),
+                const Divider(),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text("Total", style: TextStyle(fontWeight: FontWeight.bold)),
-                    Text("Rwf 82,300", style: TextStyle(color: Colors.orange))
+                    const Text("Total", style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text(formatRwf(total), style: const TextStyle(color: Colors.orange)),
                   ],
                 ),
               ],
@@ -64,8 +69,14 @@ void showPaymentDialog(BuildContext context) {
           const SizedBox(height: 10),
           ElevatedButton(
             onPressed: () {
-              Navigator.pop(context); // Close payment dialog
-              showThankYouDialog(context); // Show thank you
+              if (phoneController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please enter your phone number')),
+                );
+                return;
+              }
+              Navigator.pop(context);
+              showThankYouDialog(context);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.amber,
@@ -75,7 +86,9 @@ void showPaymentDialog(BuildContext context) {
           ),
           TextButton(
             onPressed: () {
-              // Handle "use bank" flow
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Bank transfer coming soon')),
+              );
             },
             child: const Text("USE BANK", style: TextStyle(color: Colors.blue)),
           )
@@ -84,9 +97,6 @@ void showPaymentDialog(BuildContext context) {
     ),
   );
 }
-
-
-
 
 void showThankYouDialog(BuildContext context) {
   showDialog(
@@ -111,17 +121,15 @@ void showThankYouDialog(BuildContext context) {
           ElevatedButton(
             onPressed: () {
               showModalBottomSheet(
-                    context: context,
-                      shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(25.0)),
-                     ),
-
-                    builder: (_) => SizedBox(
-                      height: MediaQuery.of(context).size.height * 0.7, // 70% of screen height
-                      child: ReviewDialog(),
-
-                  ),
-                  );
+                context: context,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(25.0)),
+                ),
+                builder: (_) => SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.7,
+                  child: ReviewDialog(),
+                ),
+              );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green,

@@ -65,6 +65,7 @@ class AuthService {
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
           // Initialize driver-specific fields if role is driver
+          verificationStatus: role == UserRole.driver ? 'pending' : 'verified',
           isAvailable: role == UserRole.driver ? false : null,
           rating: role == UserRole.driver ? 0.0 : null,
           completedJobs: role == UserRole.driver ? 0 : null,

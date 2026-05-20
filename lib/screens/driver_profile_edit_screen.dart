@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../core/models/user_model.dart';
 import '../core/repositories/user_repository.dart';
 import '../providers/auth_provider.dart';
+import '../features/profile/providers/profile_provider.dart';
 import '../mixins/image_picker_mixin.dart';
 
 class DriverProfileEditScreen extends StatefulWidget {
@@ -212,8 +213,12 @@ class _DriverProfileEditScreenState extends State<DriverProfileEditScreen> with 
         await _userRepository.updateUserWithDocuments(currentUser.uid, documentUpdates);
       }
 
-      // Refresh auth provider with updated user
+      // Refresh auth provider with updated user, then sync ProfileProvider
       await authProvider.refreshUserData();
+      if (mounted) {
+        Provider.of<ProfileProvider>(context, listen: false)
+            .setCurrentUser(authProvider.user);
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

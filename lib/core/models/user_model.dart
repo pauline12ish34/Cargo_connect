@@ -7,7 +7,7 @@ class UserModel {
   final String email;
   final String phoneNumber;
   final UserRole role;
-  final bool isVerified;
+  final String verificationStatus; // 'pending' | 'under_review' | 'verified' | 'rejected'
   final String? profileImageUrl;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -48,7 +48,7 @@ class UserModel {
     required this.email,
     required this.phoneNumber,
     required this.role,
-    this.isVerified = false,
+    this.verificationStatus = 'pending',
     this.profileImageUrl,
     required this.createdAt,
     required this.updatedAt,
@@ -87,7 +87,7 @@ class UserModel {
         (e) => e.toString() == 'UserRole.${data['role']}',
         orElse: () => UserRole.cargoOwner,
       ),
-      isVerified: data['isVerified'] ?? false,
+      verificationStatus: data['verificationStatus'] ?? 'pending',
       profileImageUrl: data['profileImageUrl'],
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
@@ -121,7 +121,7 @@ class UserModel {
       'email': email,
       'phoneNumber': phoneNumber,
       'role': role.toString().split('.').last,
-      'isVerified': isVerified,
+      'verificationStatus': verificationStatus,
       'profileImageUrl': profileImageUrl,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
@@ -156,7 +156,7 @@ class UserModel {
     String? email,
     String? phoneNumber,
     UserRole? role,
-    bool? isVerified,
+    String? verificationStatus,
     String? profileImageUrl,
     DateTime? updatedAt,
     String? driverLicense,
@@ -187,7 +187,7 @@ class UserModel {
       email: email ?? this.email,
       phoneNumber: phoneNumber ?? this.phoneNumber,
       role: role ?? this.role,
-      isVerified: isVerified ?? this.isVerified,
+      verificationStatus: verificationStatus ?? this.verificationStatus,
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
       createdAt: createdAt,
       updatedAt: updatedAt ?? DateTime.now(),
@@ -214,6 +214,9 @@ class UserModel {
       fcmToken: fcmToken ?? this.fcmToken,
     );
   }
+
+  // Computed verification getter — keeps existing code working
+  bool get isVerified => verificationStatus == 'verified';
 
   // Compatibility getters for existing code
   String get firstName => name.split(' ').isNotEmpty ? name.split(' ').first : '';

@@ -12,6 +12,8 @@ import '../../../screens/notifications_screen.dart';
 import '../../../screens/create_job_screen.dart';
 import '../../../screens/job_details_screen.dart';
 import '../../../screens/settings_screen.dart';
+import '../../../screens/cargo_owner_profile_edit_screen.dart';
+import '../../../screens/help_support_screen.dart';
 
 class CargoOwnerHome extends StatefulWidget {
   const CargoOwnerHome({super.key});
@@ -474,7 +476,9 @@ class _ProfileTab extends StatelessWidget {
                   icon: Icons.person,
                   title: 'Edit Profile',
                   onTap: () {
-                    // TODO: Navigate to edit profile
+                    Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => const CargoOwnerProfileEditScreen(),
+                    ));
                   },
                 ),
                 _ProfileOption(
@@ -492,21 +496,33 @@ class _ProfileTab extends StatelessWidget {
                   icon: Icons.notifications,
                   title: 'Notifications',
                   onTap: () {
-                    // TODO: Navigate to notifications settings
+                    Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => const NotificationsScreen(),
+                    ));
                   },
                 ),
                 _ProfileOption(
                   icon: Icons.help,
                   title: 'Help & Support',
                   onTap: () {
-                    // TODO: Navigate to help
+                    Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => const HelpSupportScreen(),
+                    ));
                   },
                 ),
                 _ProfileOption(
                   icon: Icons.info,
                   title: 'About',
                   onTap: () {
-                    // TODO: Navigate to about
+                    showAboutDialog(
+                      context: context,
+                      applicationName: 'CargoLink Rwanda',
+                      applicationVersion: '1.0.0',
+                      applicationIcon: const Icon(Icons.local_shipping, size: 48),
+                      children: [
+                        const Text('Connecting cargo owners with reliable drivers across Rwanda.'),
+                      ],
+                    );
                   },
                 ),
               const SizedBox(height: 24),
@@ -515,15 +531,10 @@ class _ProfileTab extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () async {
-                    await authProvider.signOut();
-                    if (context.mounted) {
-                      Navigator.pushNamedAndRemoveUntil(
-                        context,
-                        '/',
-                            (route) => false,
-                      );
-                    }
+                  onPressed: () {
+                    Navigator.pushNamedAndRemoveUntil(
+                        context, '/', (route) => false);
+                    authProvider.signOut();
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,

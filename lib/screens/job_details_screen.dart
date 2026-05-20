@@ -8,6 +8,8 @@ import 'package:cargo_app/providers/auth_provider.dart';
 import 'package:cargo_app/core/enums/app_enums.dart';
 import 'package:cargo_app/features/chat/chat_screen.dart';
 import 'package:cargo_app/constants.dart';
+import 'package:flutter_rating_bar/flutter_rating_bar.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class JobDetailsScreen extends StatefulWidget {
   final BookingModel booking;
@@ -24,11 +26,35 @@ class JobDetailsScreen extends StatefulWidget {
 class _JobDetailsScreenState extends State<JobDetailsScreen> {
   UserModel? _assignedDriver;
   bool _isLoading = false;
+  bool _hasRated = false;
+  bool _hasRatedOwner = false;
 
   @override
   void initState() {
     super.initState();
     _loadDriverInfo();
+    _checkIfRated();
+    _checkIfRatedOwner();
+  }
+
+  Future<void> _checkIfRated() async {
+    final doc = await FirebaseFirestore.instance
+        .collection('bookings')
+        .doc(widget.booking.id)
+        .get();
+    if (doc.exists && doc.data()?['driverRating'] != null) {
+      if (mounted) setState(() => _hasRated = true);
+    }
+  }
+
+  Future<void> _checkIfRatedOwner() async {
+    final doc = await FirebaseFirestore.instance
+        .collection('bookings')
+        .doc(widget.booking.id)
+        .get();
+    if (doc.exists && doc.data()?['ownerRating'] != null) {
+      if (mounted) setState(() => _hasRatedOwner = true);
+    }
   }
 
   Future<void> _loadDriverInfo() async {
@@ -157,12 +183,31 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      _assignedDriver!.name,
-                                      style: const TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                    Row(
+                                      children: [
+                                        Text(
+                                          _assignedDriver!.name,
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        if (_assignedDriver!.isVerified)
+                                          const Tooltip(
+                                            message: 'Verified Driver',
+                                            child: Icon(Icons.verified,
+                                                size: 18, color: Colors.blue),
+                                          )
+                                        else
+                                          Tooltip(
+                                            message: 'Not yet verified',
+                                            child: Icon(
+                                                Icons.warning_amber_rounded,
+                                                size: 18,
+                                                color: Colors.orange.shade400),
+                                          ),
+                                      ],
                                     ),
                                     const SizedBox(height: 4),
                                     Row(
@@ -334,14 +379,31 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
               children: [
                 Icon(Icons.check_circle, color: Colors.green),
                 SizedBox(width: 12),
-                Text(
-                  'Job completed successfully!',
-                  style: TextStyle(
-                      color: Colors.green, fontWeight: FontWeight.bold),
-                ),
+                Text('Job completed successfully!',
+                    style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
               ],
             ),
           ),
+          if (_assignedDriver != null && !_hasRated) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _showRatingDialog,
+                icon: const Icon(Icons.star),
+                label: const Text('Rate Driver'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+          ] else if (_hasRated) ...[
+            const SizedBox(height: 8),
+            const Center(
+              child: Text('You have rated this driver', style: TextStyle(color: Colors.grey)),
+            ),
+          ],
         ];
       case BookingStatus.cancelled:
         return [
@@ -398,8 +460,197 @@ class _JobDetailsScreenState extends State<JobDetailsScreen> {
             ),
           ),
         ];
+      case BookingStatus.completed:
+        return [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.green.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.green.shade200),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.green),
+                SizedBox(width: 12),
+                Text('Job completed successfully!',
+                    style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+          if (!_hasRatedOwner) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _showOwnerRatingDialog,
+                icon: const Icon(Icons.star),
+                label: const Text('Rate Cargo Owner'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+          ] else ...[
+            const SizedBox(height: 8),
+            const Center(
+              child: Text('You have rated this cargo owner', style: TextStyle(color: Colors.grey)),
+            ),
+          ],
+        ];
       default:
         return [];
+    }
+  }
+
+  void _showOwnerRatingDialog() {
+    double selectedRating = 5.0;
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Rate Cargo Owner'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('How was your experience with this cargo owner?'),
+            const SizedBox(height: 16),
+            RatingBar.builder(
+              initialRating: 5,
+              minRating: 1,
+              direction: Axis.horizontal,
+              allowHalfRating: true,
+              itemCount: 5,
+              itemBuilder: (context, _) =>
+                  const Icon(Icons.star, color: Colors.orange),
+              onRatingUpdate: (rating) => selectedRating = rating,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              await _submitOwnerRating(selectedRating);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+            child: const Text('Submit'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _submitOwnerRating(double rating) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('bookings')
+          .doc(widget.booking.id)
+          .update({'ownerRating': rating});
+
+      if (mounted) {
+        setState(() => _hasRatedOwner = true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Rating submitted. Thank you!'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to submit rating: $e')),
+        );
+      }
+    }
+  }
+
+  void _showRatingDialog() {
+    double selectedRating = 5.0;
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Rate Driver'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('How was your experience with ${_assignedDriver!.name}?'),
+            const SizedBox(height: 16),
+            RatingBar.builder(
+              initialRating: 5,
+              minRating: 1,
+              direction: Axis.horizontal,
+              allowHalfRating: true,
+              itemCount: 5,
+              itemBuilder: (context, _) =>
+                  const Icon(Icons.star, color: Colors.orange),
+              onRatingUpdate: (rating) => selectedRating = rating,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              await _submitRating(selectedRating);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+            child: const Text('Submit'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _submitRating(double rating) async {
+    if (_assignedDriver == null) return;
+    try {
+      final driverRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(_assignedDriver!.uid);
+      final bookingRef = FirebaseFirestore.instance
+          .collection('bookings')
+          .doc(widget.booking.id);
+
+      final currentRating = _assignedDriver!.rating ?? 0.0;
+      final currentJobs = _assignedDriver!.completedJobs ?? 0;
+      final newAvg = currentJobs > 0
+          ? ((currentRating * currentJobs) + rating) / (currentJobs + 1)
+          : rating;
+
+      await Future.wait([
+        driverRef.update({
+          'rating': double.parse(newAvg.toStringAsFixed(1)),
+          'completedJobs': currentJobs + 1,
+        }),
+        bookingRef.update({'driverRating': rating}),
+      ]);
+
+      if (mounted) {
+        setState(() => _hasRated = true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Rating submitted. Thank you!'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to submit rating: $e')),
+        );
+      }
     }
   }
 

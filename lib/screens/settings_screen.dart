@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../core/enums/app_enums.dart';
 import '../core/repositories/user_repository.dart';
 import '../providers/auth_provider.dart';
@@ -32,16 +33,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _loadUserData() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final currentUser = authProvider.user;
-    
-    if (currentUser != null) {
+    final prefs = await SharedPreferences.getInstance();
+
+    if (mounted) {
       setState(() {
-        _isAvailable = currentUser.isAvailable ?? false;
-        // These would be loaded from user preferences in a real app
-        _pushNotifications = true;
-        _emailNotifications = true;
-        _smsNotifications = false;
+        _isAvailable = currentUser?.isAvailable ?? false;
+        _pushNotifications = prefs.getBool('pref_push_notifications') ?? true;
+        _emailNotifications = prefs.getBool('pref_email_notifications') ?? true;
+        _smsNotifications = prefs.getBool('pref_sms_notifications') ?? false;
       });
     }
+  }
+
+  Future<void> _savePref(String key, bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(key, value);
   }
 
   Future<void> _updateAvailability(bool value) async {
@@ -245,61 +251,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
               subtitle: 'Receive instant notifications on your device',
               value: _pushNotifications,
               onChanged: (value) {
-                setState(() {
-                  _pushNotifications = value;
-                });
-                // Here you would save the preference to user settings
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      value 
-                        ? 'Push notifications enabled'
-                        : 'Push notifications disabled',
-                    ),
-                  ),
-                );
+                setState(() => _pushNotifications = value);
+                _savePref('pref_push_notifications', value);
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(value ? 'Push notifications enabled' : 'Push notifications disabled'),
+                ));
               },
             ),
-            
+
             _buildSettingsTile(
               icon: Icons.email,
               title: 'Email Notifications',
               subtitle: 'Receive job updates via email',
               value: _emailNotifications,
               onChanged: (value) {
-                setState(() {
-                  _emailNotifications = value;
-                });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      value 
-                        ? 'Email notifications enabled'
-                        : 'Email notifications disabled',
-                    ),
-                  ),
-                );
+                setState(() => _emailNotifications = value);
+                _savePref('pref_email_notifications', value);
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(value ? 'Email notifications enabled' : 'Email notifications disabled'),
+                ));
               },
             ),
-            
+
             _buildSettingsTile(
               icon: Icons.sms,
               title: 'SMS Notifications',
               subtitle: 'Receive job alerts via SMS',
               value: _smsNotifications,
               onChanged: (value) {
-                setState(() {
-                  _smsNotifications = value;
-                });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      value 
-                        ? 'SMS notifications enabled'
-                        : 'SMS notifications disabled',
-                    ),
-                  ),
-                );
+                setState(() => _smsNotifications = value);
+                _savePref('pref_sms_notifications', value);
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(value ? 'SMS notifications enabled' : 'SMS notifications disabled'),
+                ));
               },
             ),
             

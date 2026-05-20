@@ -138,9 +138,27 @@ class _DriverSelectionScreenState extends State<DriverSelectionScreen> {
                                   as ImageProvider,
                           radius: 28,
                         ),
-                        title: Text(driver.name,
-                            style:
-                                const TextStyle(fontWeight: FontWeight.bold)),
+                        title: Row(
+                          children: [
+                            Text(driver.name,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold)),
+                            const SizedBox(width: 6),
+                            if (driver.isVerified)
+                              const Tooltip(
+                                message: 'Verified Driver',
+                                child: Icon(Icons.verified,
+                                    size: 16, color: Colors.blue),
+                              )
+                            else
+                              Tooltip(
+                                message: 'Not yet verified',
+                                child: Icon(Icons.warning_amber_rounded,
+                                    size: 16,
+                                    color: Colors.orange.shade400),
+                              ),
+                          ],
+                        ),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
