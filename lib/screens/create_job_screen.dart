@@ -1,12 +1,14 @@
 import '../widgets/app_states.dart';
 import '../utils/page_transitions.dart';
 import 'package:cargo_app/constants.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/enums/app_enums.dart';
 import '../../../features/booking/providers/booking_provider.dart';
 import '../../../providers/auth_provider.dart';
 import 'driver_selection_screen.dart';
+import 'map_location_picker.dart';
 
 class CreateJobScreen extends StatefulWidget {
   const CreateJobScreen({super.key});
@@ -25,6 +27,49 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
   final _estimatedPriceController = TextEditingController();
 
   VehicleType _selectedVehicleType = VehicleType.truck;
+  List<VehicleType> _availableVehicleTypes = [];
+  bool _loadingVehicleTypes = true;
+
+  PickedLocation? _pickupLocation;
+  PickedLocation? _dropoffLocation;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAvailableVehicleTypes();
+  }
+
+  Future<void> _loadAvailableVehicleTypes() async {
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('users')
+          .where('role', isEqualTo: 'driver')
+          .where('verificationStatus', isEqualTo: 'verified')
+          .get();
+
+      final typeNames = snap.docs
+          .map((d) => d.data()['vehicleType'] as String?)
+          .where((t) => t != null && t.isNotEmpty)
+          .map((t) => t!)
+          .toSet();
+
+      final types = VehicleType.values
+          .where((v) => typeNames.contains(v.name))
+          .toList();
+
+      if (mounted) {
+        setState(() {
+          _availableVehicleTypes = types;
+          if (types.isNotEmpty && !types.contains(_selectedVehicleType)) {
+            _selectedVehicleType = types.first;
+          }
+          _loadingVehicleTypes = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingVehicleTypes = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -35,6 +80,29 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
     _specialInstructionsController.dispose();
     _estimatedPriceController.dispose();
     super.dispose();
+  }
+
+  Future<void> _openMapPicker({required bool isPickup}) async {
+    final result = await Navigator.push<PickedLocation>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MapLocationPicker(
+          title: isPickup ? 'Set Pickup Location' : 'Set Dropoff Location',
+          initialLocation: isPickup ? _pickupLocation : _dropoffLocation,
+        ),
+      ),
+    );
+    if (result != null && mounted) {
+      setState(() {
+        if (isPickup) {
+          _pickupLocation = result;
+          _pickupController.text = result.address;
+        } else {
+          _dropoffLocation = result;
+          _dropoffController.text = result.address;
+        }
+      });
+    }
   }
 
   Future<void> _createJob() async {
@@ -136,10 +204,17 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                     // Pickup Location
                     TextFormField(
                       controller: _pickupController,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Pickup Location *',
-                        prefixIcon: Icon(Icons.location_on),
-                        border: OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.location_on),
+                        border: const OutlineInputBorder(),
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.map_outlined,
+                              color: primaryGreen),
+                          tooltip: 'Pick on map',
+                          onPressed: () =>
+                              _openMapPicker(isPickup: true),
+                        ),
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -153,10 +228,17 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                     // Dropoff Location
                     TextFormField(
                       controller: _dropoffController,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Dropoff Location *',
-                        prefixIcon: Icon(Icons.flag),
-                        border: OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.flag),
+                        border: const OutlineInputBorder(),
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.map_outlined,
+                              color: primaryGreen),
+                          tooltip: 'Pick on map',
+                          onPressed: () =>
+                              _openMapPicker(isPickup: false),
+                        ),
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -185,35 +267,55 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Vehicle Type
-                    DropdownButtonFormField<VehicleType>(
-                      initialValue: _selectedVehicleType,
-                      decoration: const InputDecoration(
-                        labelText: 'Vehicle Type *',
-                        prefixIcon: Icon(Icons.local_shipping),
-                        border: OutlineInputBorder(),
+                    // Vehicle Type — only types owned by verified drivers
+                    if (_loadingVehicleTypes)
+                      const InputDecorator(
+                        decoration: InputDecoration(
+                          labelText: 'Vehicle Type *',
+                          prefixIcon: Icon(Icons.local_shipping),
+                          border: OutlineInputBorder(),
+                        ),
+                        child: Row(
+                          children: [
+                            SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                            SizedBox(width: 12),
+                            Text('Loading available vehicles…'),
+                          ],
+                        ),
+                      )
+                    else if (_availableVehicleTypes.isEmpty)
+                      const InputDecorator(
+                        decoration: InputDecoration(
+                          labelText: 'Vehicle Type *',
+                          prefixIcon: Icon(Icons.local_shipping),
+                          border: OutlineInputBorder(),
+                        ),
+                        child: Text(
+                          'No verified drivers available yet',
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      )
+                    else
+                      DropdownButtonFormField<VehicleType>(
+                        value: _selectedVehicleType,
+                        decoration: const InputDecoration(
+                          labelText: 'Vehicle Type *',
+                          prefixIcon: Icon(Icons.local_shipping),
+                          border: OutlineInputBorder(),
+                        ),
+                        items: _availableVehicleTypes.map((type) {
+                          return DropdownMenuItem(
+                            value: type,
+                            child: Text(_getVehicleTypeDisplayName(type)),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          if (value != null) setState(() => _selectedVehicleType = value);
+                        },
+                        validator: (_) => _availableVehicleTypes.isEmpty
+                            ? 'No vehicles available'
+                            : null,
                       ),
-                      items: VehicleType.values.isNotEmpty
-                          ? VehicleType.values.map((type) {
-                              return DropdownMenuItem(
-                                value: type,
-                                child: Text(_getVehicleTypeDisplayName(type)),
-                              );
-                            }).toList()
-                          : [
-                              const DropdownMenuItem(
-                                value: null,
-                                child: Text('No vehicle types available'),
-                              ),
-                            ],
-                      onChanged: (value) {
-                        if (value != null) {
-                          setState(() {
-                            _selectedVehicleType = value;
-                          });
-                        }
-                      },
-                    ),
                     const SizedBox(height: 16),
 
                     // Weight (Optional)
@@ -283,16 +385,5 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
     );
   }
 
-  String _getVehicleTypeDisplayName(VehicleType type) {
-    switch (type) {
-      case VehicleType.truck:
-        return 'Truck';
-      case VehicleType.van:
-        return 'Van';
-      case VehicleType.pickup:
-        return 'Pickup';
-      case VehicleType.lorry:
-        return 'Lorry';
-    }
-  }
+  String _getVehicleTypeDisplayName(VehicleType type) => type.displayName;
 }

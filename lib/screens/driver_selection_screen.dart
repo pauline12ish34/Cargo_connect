@@ -68,19 +68,38 @@ class _DriverSelectionScreenState extends State<DriverSelectionScreen> {
     return driverCapacityKg >= cargoWeightKg;
   }
 
-  /// Matches free-text vehicle type from driver profile against the required enum.
+  /// Matches a driver's vehicle type string against the required enum.
+  /// Exact enum name match (new registrations) takes priority; falls back to
+  /// keyword matching for legacy free-text entries.
   bool _matchesVehicleType(String? driverVehicleStr, VehicleType required) {
     if (driverVehicleStr == null || driverVehicleStr.isEmpty) return false;
-    final s = driverVehicleStr.toLowerCase();
+    final s = driverVehicleStr.toLowerCase().trim();
+    // Exact match — covers all drivers registered via the dropdown
+    if (s == required.name.toLowerCase()) return true;
+    // Keyword fallback for legacy free-text entries
     switch (required) {
       case VehicleType.truck:
-        return s.contains('truck') && !s.contains('pickup');
+        return s == 'truck' || (s.contains('truck') && !s.contains('pickup') && !s.contains('mini') && !s.contains('box') && !s.contains('container') && !s.contains('flatbed') && !s.contains('tipper') && !s.contains('refrigerat'));
       case VehicleType.van:
         return s.contains('van');
       case VehicleType.pickup:
         return s.contains('pickup');
       case VehicleType.lorry:
         return s.contains('lorry');
+      case VehicleType.miniTruck:
+        return s.contains('mini');
+      case VehicleType.flatbed:
+        return s.contains('flatbed');
+      case VehicleType.refrigerated:
+        return s.contains('refrigerat');
+      case VehicleType.tipper:
+        return s.contains('tipper');
+      case VehicleType.containerTruck:
+        return s.contains('container');
+      case VehicleType.boxTruck:
+        return s.contains('box truck') || s.contains('boxtruck');
+      case VehicleType.motorcycle:
+        return s.contains('motorcycle') || s.contains('motorbike');
     }
   }
 

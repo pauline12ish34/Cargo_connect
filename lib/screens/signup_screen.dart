@@ -32,6 +32,32 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   // In your existing SignupScreen, modify the _handleSignup method:
+  Future<void> _handleGoogleSignUp() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final success = await authProvider.signInWithGoogle(role: _selectedRole);
+    if (!mounted) return;
+    if (success) {
+      if (_selectedRole == UserRole.driver) {
+        final user = authProvider.user;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => DriverSignupScreen(
+              fromGoogle: true,
+              initialName: user?.name,
+              initialEmail: user?.email,
+              initialPhone: user?.phoneNumber,
+            ),
+          ),
+        );
+      } else {
+        Navigator.pushReplacementNamed(context, '/home');
+      }
+    } else if (authProvider.error != null) {
+      AppSnackbar.showError(context, authProvider.error!);
+    }
+  }
+
   Future<void> _handleSignup() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -263,18 +289,41 @@ class _SignupScreenState extends State<SignupScreen> {
                             style: TextStyle(color: Colors.white),
                           ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
+                  const Divider(),
+                  const SizedBox(height: 10),
                   const Center(child: Text("Or continue with")),
                   const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      FaIcon(FontAwesomeIcons.google, size: 24),
-                      SizedBox(width: 20),
-                      FaIcon(FontAwesomeIcons.facebook, size: 24),
-                      SizedBox(width: 20),
-                      FaIcon(FontAwesomeIcons.instagram, size: 24),
-                    ],
+                  Consumer<AuthProvider>(
+                    builder: (context, auth, _) => SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: OutlinedButton.icon(
+                        onPressed: auth.isLoading || auth.isGoogleLoading
+                            ? null
+                            : _handleGoogleSignUp,
+                        icon: auth.isGoogleLoading
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF4285F4)),
+                                ),
+                              )
+                            : const FaIcon(FontAwesomeIcons.google, size: 18, color: Color(0xFF4285F4)),
+                        label: Text(
+                          auth.isGoogleLoading ? 'Signing in…' : 'Continue with Google',
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Color(0xFFCBD5E1)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 20),
                   Row(

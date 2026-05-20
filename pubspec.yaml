@@ -53,6 +53,9 @@ dependencies:
   flutter_local_notifications: ^18.0.1
   google_sign_in: ^6.2.1
   flutter_animate: ^4.5.2
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
+  geolocator: ^13.0.2
 
 dev_dependencies:
   flutter_test:
@@ -99,8 +102,8 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: false
-  image_path: "assets/images/cargolink-logo.png"
+  image_path: "assets/images/launcher_icon.png"
   min_sdk_android: 21
   adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/images/cargolink-logo.png"
+  adaptive_icon_foreground: "assets/images/launcher_icon_fg.png"
 

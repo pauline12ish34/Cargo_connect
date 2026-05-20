@@ -17,7 +17,7 @@ dependencies {
 android {
     namespace = "com.example.cargo_app"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = "29.0.13599879"//flutter.ndkVersion
+    ndkVersion = flutter.ndkVersion
 
     compileOptions {
         isCoreLibraryDesugaringEnabled = true

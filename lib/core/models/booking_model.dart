@@ -132,18 +132,7 @@ class BookingModel {
     );
   }
 
-  String get vehicleTypeDisplayName {
-    switch (vehicleType) {
-      case VehicleType.truck:
-        return 'Truck';
-      case VehicleType.van:
-        return 'Van';
-      case VehicleType.pickup:
-        return 'Pickup';
-      case VehicleType.lorry:
-        return 'Lorry';
-    }
-  }
+  String get vehicleTypeDisplayName => vehicleType.displayName;
 
   String get statusDisplayName {
     switch (status) {

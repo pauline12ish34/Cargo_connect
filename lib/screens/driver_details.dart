@@ -4,11 +4,11 @@ import '../providers/auth_provider.dart';
 import '../core/enums/app_enums.dart';
 
 class DriverSignupScreen extends StatefulWidget {
-  
-   final String? initialName;
+  final String? initialName;
   final String? initialEmail;
   final String? initialPhone;
   final String? initialPassword;
+  final bool fromGoogle;
 
   const DriverSignupScreen({
     super.key,
@@ -16,6 +16,7 @@ class DriverSignupScreen extends StatefulWidget {
     this.initialEmail,
     this.initialPhone,
     this.initialPassword,
+    this.fromGoogle = false,
   });
 
   @override
@@ -41,7 +42,7 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
   final insuranceController = TextEditingController();
   final nationalIdController = TextEditingController();
   final vehicleRegistrationController = TextEditingController();
-  final vehicleTypeController = TextEditingController();
+  VehicleType _selectedVehicleType = VehicleType.truck;
   final vehicleCapacityController = TextEditingController();
 
   @override
@@ -55,7 +56,6 @@ class _DriverSignupScreenState extends State<DriverSignupScreen> {
     insuranceController.dispose();
     nationalIdController.dispose();
     vehicleRegistrationController.dispose();
-    vehicleTypeController.dispose();
     vehicleCapacityController.dispose();
     super.dispose();
   }
@@ -70,33 +70,41 @@ void initState() {
 }
 
   Future<void> _completeRegistration() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!widget.fromGoogle && !_formKey.currentState!.validate()) return;
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    // First create the basic user account
-    final success = await authProvider.signUp(
-      email: emailController.text.trim(),
-      password: passwordController.text,
-      name: nameController.text.trim(),
-      phoneNumber: phoneController.text.trim(),
-      role: UserRole.driver,
-    );
+    bool accountReady;
+    if (widget.fromGoogle) {
+      // Account already created via Google — skip signUp()
+      accountReady = true;
+    } else {
+      accountReady = await authProvider.signUp(
+        email: emailController.text.trim(),
+        password: passwordController.text,
+        name: nameController.text.trim(),
+        phoneNumber: phoneController.text.trim(),
+        role: UserRole.driver,
+      );
+    }
 
-    if (success && mounted) {
-      // Then update with driver-specific information
+    if (accountReady && mounted) {
       final updateSuccess = await authProvider.updateDriverDocuments(
         driverLicenseNumber: driverLicenseController.text.trim(),
         nationalId: nationalIdController.text.trim(),
         vehicleRegistration: vehicleRegistrationController.text.trim(),
-        vehicleType: vehicleTypeController.text.trim(),
+        vehicleType: _selectedVehicleType.name,
         vehicleCapacity: vehicleCapacityController.text.trim(),
         plateNumber: plateNumberController.text.trim(),
         insurance: insuranceController.text.trim(),
       );
 
       if (updateSuccess && mounted) {
-        Navigator.pushReplacementNamed(context, '/email-verification');
+        // Google users already have verified email — go straight to home
+        Navigator.pushReplacementNamed(
+          context,
+          widget.fromGoogle ? '/home' : '/email-verification',
+        );
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -105,7 +113,7 @@ void initState() {
           ),
         );
       }
-    } else if (mounted) {
+    } else if (!accountReady && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(authProvider.error ?? 'Signup failed'),
@@ -117,6 +125,7 @@ void initState() {
 
   List<Step> _buildSteps() {
     return [
+      if (!widget.fromGoogle)
       Step(
         title: const Text('Basic Info'),
         content: Form(
@@ -241,8 +250,8 @@ void initState() {
             ),
           ],
         ),
-        isActive: _currentStep >= 1,
-        state: _currentStep > 1 ? StepState.complete : StepState.indexed,
+        isActive: _currentStep >= (widget.fromGoogle ? 0 : 1),
+        state: _currentStep > (widget.fromGoogle ? 0 : 1) ? StepState.complete : StepState.indexed,
       ),
       Step(
         title: const Text('Vehicle Info'),
@@ -276,18 +285,21 @@ void initState() {
               ),
             ),
             const SizedBox(height: 16),
-            TextFormField(
-              controller: vehicleTypeController,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter vehicle type';
-                }
-                return null;
-              },
+            DropdownButtonFormField<VehicleType>(
+              value: _selectedVehicleType,
               decoration: const InputDecoration(
-                labelText: 'Vehicle Type (e.g., Truck, Van)',
-                prefixIcon: Icon(Icons.category),
+                labelText: 'Vehicle Type *',
+                prefixIcon: Icon(Icons.local_shipping),
               ),
+              items: VehicleType.values.map((type) {
+                return DropdownMenuItem(
+                  value: type,
+                  child: Text(type.displayName),
+                );
+              }).toList(),
+              onChanged: (value) {
+                if (value != null) setState(() => _selectedVehicleType = value);
+              },
             ),
             const SizedBox(height: 16),
             TextFormField(
@@ -314,8 +326,8 @@ void initState() {
             ),
           ],
         ),
-        isActive: _currentStep >= 2,
-        state: _currentStep > 2 ? StepState.complete : StepState.indexed,
+        isActive: _currentStep >= (widget.fromGoogle ? 1 : 2),
+        state: _currentStep > (widget.fromGoogle ? 1 : 2) ? StepState.complete : StepState.indexed,
       ),
     ];
   }
