@@ -1,15 +1,24 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../core/models/user_model.dart';
 import '../core/enums/app_enums.dart';
 import '../utils/firebase_auth_helper.dart';
 
+/// Thrown when the user dismisses the Google account picker.
+/// Callers can catch this separately to avoid showing an error snackbar.
+class GoogleSignInCancelledException implements Exception {
+  const GoogleSignInCancelledException();
+}
+
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
 
   AuthService() {
-    // Configure Firebase Auth settings for better debugging
     _auth.setLanguageCode('en');
   }
 
@@ -110,11 +119,67 @@ class AuthService {
     }
   }
 
+  // Google Sign-In
+  Future<UserCredential> signInWithGoogle({UserRole? role}) async {
+    try {
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) throw const GoogleSignInCancelledException();
+
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      if (googleAuth.accessToken == null || googleAuth.idToken == null) {
+        throw 'Google sign-in failed. Please try again.';
+      }
+
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final userCredential = await _auth.signInWithCredential(credential);
+      if (userCredential.user == null) throw 'Failed to sign in. Please try again.';
+
+      // Create Firestore profile for first-time Google users
+      final doc = await _firestore.collection('users').doc(userCredential.user!.uid).get();
+      if (!doc.exists) {
+        final effectiveRole = role ?? UserRole.cargoOwner;
+        final userModel = UserModel(
+          uid: userCredential.user!.uid,
+          name: userCredential.user!.displayName ?? 'Google User',
+          email: userCredential.user!.email ?? '',
+          phoneNumber: userCredential.user!.phoneNumber ?? '',
+          role: effectiveRole,
+          verificationStatus: effectiveRole == UserRole.driver ? 'pending' : 'verified',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+          profileImageUrl: userCredential.user!.photoURL,
+          isAvailable: effectiveRole == UserRole.driver ? false : null,
+          rating: effectiveRole == UserRole.driver ? 0.0 : null,
+          completedJobs: effectiveRole == UserRole.driver ? 0 : null,
+        );
+        await _firestore.collection('users').doc(userCredential.user!.uid).set(userModel.toFirestore());
+      }
+
+      if (kDebugMode) debugPrint('[Auth] Google sign-in: ${userCredential.user!.email}');
+      return userCredential;
+    } on GoogleSignInCancelledException {
+      rethrow;
+    } on FirebaseAuthException catch (e) {
+      throw FirebaseAuthHelper.getAuthErrorMessage(e);
+    } on PlatformException catch (e) {
+      throw FirebaseAuthHelper.getGoogleSignInErrorMessage(e);
+    } catch (e) {
+      if (e is String) rethrow;
+      throw 'Google sign-in failed. Please try again.';
+    }
+  }
+
   // Sign out
   Future<void> signOut() async {
     try {
+      if (await _googleSignIn.isSignedIn()) await _googleSignIn.disconnect();
       await _auth.signOut();
     } catch (e) {
+      try { await _auth.signOut(); } catch (_) {}
       throw Exception('Failed to sign out: $e');
     }
   }

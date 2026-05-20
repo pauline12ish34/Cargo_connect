@@ -3,6 +3,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../constants.dart';
+import '../widgets/app_states.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -22,6 +23,17 @@ class _LoginScreenState extends State<LoginScreen> {
     emailController.dispose();
     passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final success = await authProvider.signInWithGoogle();
+    if (!mounted) return;
+    if (success) {
+      Navigator.pushReplacementNamed(context, '/home');
+    } else if (authProvider.error != null) {
+      AppSnackbar.showError(context, authProvider.error!);
+    }
   }
 
   Future<void> _handleLogin() async {
@@ -163,15 +175,34 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 10),
                   const Center(child: Text("Or continue with")),
                   const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      FaIcon(FontAwesomeIcons.google, size: 24),
-                      SizedBox(width: 20),
-                      FaIcon(FontAwesomeIcons.facebook, size: 24),
-                      SizedBox(width: 20),
-                      FaIcon(FontAwesomeIcons.instagram, size: 24),
-                    ],
+                  Consumer<AuthProvider>(
+                    builder: (context, auth, _) => SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: OutlinedButton.icon(
+                        onPressed: auth.isLoading || auth.isGoogleLoading
+                            ? null
+                            : _handleGoogleSignIn,
+                        icon: auth.isGoogleLoading
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF4285F4)),
+                                ),
+                              )
+                            : const FaIcon(FontAwesomeIcons.google, size: 18, color: Color(0xFF4285F4)),
+                        label: Text(
+                          auth.isGoogleLoading ? 'Signing in…' : 'Continue with Google',
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Color(0xFFCBD5E1)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),

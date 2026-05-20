@@ -80,7 +80,7 @@ class _HomeState extends State<Home> {
         }
 
         // Fallback if user model is not loaded or role is unclear
-        return const AppEmpty(message: 'No profile found');
+        return const AppEmpty(title: 'No profile found', subtitle: 'Please sign in again.');
       },
     );
   }

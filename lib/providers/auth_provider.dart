@@ -11,11 +11,13 @@ class AuthProvider with ChangeNotifier {
 
   UserModel? _user;
   bool _isLoading = false;
+  bool _isGoogleLoading = false;
   String? _error;
   bool _authListenerRegistered = false;
 
   UserModel? get user => _user;
   bool get isLoading => _isLoading;
+  bool get isGoogleLoading => _isGoogleLoading;
   String? get error => _error;
   bool get isAuthenticated => _user != null;
 
@@ -143,6 +145,29 @@ class AuthProvider with ChangeNotifier {
       return false;
     } finally {
       _setLoading(false);
+    }
+  }
+
+  // Google Sign-In
+  Future<bool> signInWithGoogle({UserRole? role}) async {
+    try {
+      _isGoogleLoading = true;
+      _clearError();
+      notifyListeners();
+
+      await _authService.signInWithGoogle(role: role);
+      _user = await _authService.getCurrentUserData();
+      DeviceTokenService.saveDeviceToken();
+
+      return true;
+    } on GoogleSignInCancelledException {
+      return false; // user dismissed picker — not an error
+    } catch (e) {
+      _setError(e.toString());
+      return false;
+    } finally {
+      _isGoogleLoading = false;
+      notifyListeners();
     }
   }
 

@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
 class FirebaseAuthHelper {
   static Future<void> configureFirebaseAuth() async {
@@ -53,6 +54,22 @@ class FirebaseAuthHelper {
         return 'reCAPTCHA verification failed. Please try again.';
       default:
         return error.message ?? 'An unknown error occurred. Please try again.';
+    }
+  }
+
+  static String getGoogleSignInErrorMessage(PlatformException error) {
+    switch (error.code) {
+      case 'sign_in_failed':
+        return 'Google sign-in failed. Please try again.';
+      case 'sign_in_canceled':
+      case 'sign_in_cancelled':
+        return 'Sign-in was cancelled.';
+      case 'network_error':
+        return 'A network error occurred. Please check your connection.';
+      case 'access_denied':
+        return 'Access was denied. Please grant the required permissions.';
+      default:
+        return error.message ?? 'Google sign-in failed. Please try again.';
     }
   }
 }
